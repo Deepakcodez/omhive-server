@@ -8,15 +8,17 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.0.5",
-    "bcryptjs": "^3.0.3",
     "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
     "hono": "^4.12.25",
-    "pg": "^8.21.0"
+    "pg": "^8.21.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^20.11.17",
     "@types/pg": "^8.20.0",
-    "tsx": "^4.7.1",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.22.4",
     "typescript": "^5.8.3"
   }
 }

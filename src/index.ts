@@ -5,6 +5,7 @@ import { userRoute } from './user/routes.js'
 const app = new Hono()
 
 app.get('/', (c) => {
+  console.log("api hit")
   return c.text('Hello Hono!')
 })
 

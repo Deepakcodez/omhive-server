@@ -1,4 +1,4 @@
-import { boolean, date, integer, pgEnum, pgTable, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, date, integer, pgEnum, pgTable, timestamp, unique, uuid, varchar } from "drizzle-orm/pg-core";
 
 
 export const workStatus = pgEnum('work_status', ['working', 'break', 'logged_out']);
@@ -28,7 +28,8 @@ export const attendanceTable = pgTable("attendance", {
     systemUsername: varchar({ length: 255 }).notNull(),
     os: varchar({ length: 100 }).notNull(),
     createdAt: timestamp().defaultNow().notNull(),
-});
+
+},);
 
 export const breakSessionTable = pgTable("break_sessions", {
     id: uuid().primaryKey().defaultRandom(),

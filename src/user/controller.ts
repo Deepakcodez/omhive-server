@@ -38,6 +38,7 @@ export const userController = {
         if (existingAttendance.length > 0) {
             return {
                 userId: user.id,
+                userName: user.userName,
                 existing: true,
                 attendanceId: existingAttendance[0].id,
                 loginTime: existingAttendance[0].loginTime
@@ -58,6 +59,7 @@ export const userController = {
         }
         return {
             userId: user.id,
+            username : user.userName,
             attendanceId: attendance.id,
             existing: false,
             loginTime: attendance.loginTime
@@ -65,7 +67,7 @@ export const userController = {
         }
     },
     break: async ({ attendanceId }: { attendanceId: string }) => {
-    
+
         const [attendance] = await db
             .select()
             .from(attendanceTable)
@@ -148,6 +150,14 @@ export const userController = {
         if (!attendance) {
             throw new Error("Attendance not found");
         }
+        if (attendance.status === "logged_out") {
+            return {
+                alreadyLoggedOut: true,
+                logoutTime: attendance.logoutTime,
+                totalWorkSeconds: attendance.totalWorkSeconds,
+                totalBreakSeconds: attendance.totalBreakSeconds,
+            };
+        }
 
         const logoutTime = new Date();
 
@@ -169,6 +179,7 @@ export const userController = {
             .where(eq(attendanceTable.id, attendanceId));
 
         return {
+            alreadyLoggedOut: false,
             logoutTime,
             totalWorkSeconds: workSeconds,
             totalBreakSeconds: attendance.totalBreakSeconds,

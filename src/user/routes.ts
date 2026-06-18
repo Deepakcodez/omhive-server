@@ -50,6 +50,15 @@ export const userRoute = new Hono()
             const user = await userController.break({ attendanceId })
             return c.json({ data: user, success: true }, 200)
         })
+    .post('/resume',
+        async (c) => {
+            const { attendanceId } = await c.req.json()
+            if (!attendanceId) {
+                return c.json({ data: null, success: false, message: "Attendance ID is required" }, 400)
+            }
+            const user = await userController.resume({ attendanceId })
+            return c.json({ data: user, success: true }, 200)
+        })
 
     // user break
     .post('/logout', async (c) => {

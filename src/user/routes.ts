@@ -25,6 +25,13 @@ export const userRoute = new Hono()
             return c.json({ data: user, success: true }, 200)
         })
 
+    // is logged in
+    .post('/is-logged-in', async (c) => {
+        const { userId, date } = await c.req.json()
+        const user = await userController.isLoggedIn({ userId, date })
+        return c.json({ data: user, success: true }, 200)
+    })
+
     // user login
     .post('/login',
         validator('json', (value, c) => {

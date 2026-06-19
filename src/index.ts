@@ -1,6 +1,7 @@
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { userRoute } from './user/routes.js'
+import { activityRoute } from './activity/route.js'
 
 const app = new Hono()
 
@@ -10,6 +11,7 @@ app.get('/', (c) => {
 })
 
 app.route('/api/user', userRoute)
+app.route('/api/activity', activityRoute)
 
 serve({
   fetch: app.fetch,

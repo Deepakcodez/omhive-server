@@ -52,3 +52,6 @@ export const activitySession = pgTable("activitysession", {
     hostname: varchar({ length: 255 }).notNull(),
     systemUsername: varchar({ length: 255 }).notNull(),
 })
+
+
+

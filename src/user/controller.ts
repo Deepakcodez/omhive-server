@@ -12,6 +12,24 @@ export const userController = {
         }).returning()
         return user
     },
+    isLoggedIn: async ({ userId, date: today }: { userId: string, date: string }) => {
+        const [attendance] = await db
+            .select()
+            .from(attendanceTable)
+            .where(
+                and(
+                    eq(attendanceTable.userId, userId),
+                    eq(attendanceTable.date, today),
+                    isNull(attendanceTable.logoutTime)
+                )
+            );
+        return {
+            loggedIn: !!attendance,
+            attendanceId: attendance?.id ?? null,
+            loginTime: attendance?.loginTime ?? null,
+            status: attendance?.status ?? null,
+        };
+    },
     login: async ({ userName, startTime, hostname, systemUsername, os }: Login) => {
         const [user] = await db
             .select()
@@ -59,7 +77,7 @@ export const userController = {
         }
         return {
             userId: user.id,
-            username : user.userName,
+            username: user.userName,
             attendanceId: attendance.id,
             existing: false,
             loginTime: attendance.loginTime
@@ -67,7 +85,6 @@ export const userController = {
         }
     },
     break: async ({ attendanceId }: { attendanceId: string }) => {
-
         const [attendance] = await db
             .select()
             .from(attendanceTable)
@@ -75,6 +92,10 @@ export const userController = {
 
         if (!attendance) {
             throw new Error("Attendance not found");
+        }
+
+        if (attendance.status === "logged_out") {
+            throw new Error("User already logged out");
         }
 
         if (attendance.status === "break") {
@@ -96,50 +117,74 @@ export const userController = {
             })
             .where(eq(attendanceTable.id, attendanceId));
 
-        return breakSession;
+        return {
+            success: true,
+            breakId: breakSession.id,
+            startTime: breakSession.startTime,
+        };
     },
     resume: async ({ attendanceId }: { attendanceId: string }) => {
-        const [activeBreak] = await db
+        const [attendance] = await db
             .select()
-            .from(breakSessionTable)
-            .where(
-                and(
-                    eq(breakSessionTable.attendanceId, attendanceId),
-                    isNull(breakSessionTable.endTime)
-                )
-            );
-
-        if (!activeBreak) {
-            throw new Error("No active break found");
-        }
-
-        const endTime = new Date();
-
-        const durationSeconds = Math.floor(
-            (endTime.getTime() -
-                activeBreak.startTime.getTime()) / 1000
-        );
-
-        await db
-            .update(breakSessionTable)
-            .set({
-                endTime,
-                durationSeconds,
-            })
-            .where(eq(breakSessionTable.id, activeBreak.id));
-
-        await db
-            .update(attendanceTable)
-            .set({
-                status: "working",
-                totalBreakSeconds:
-                    sql`${attendanceTable.totalBreakSeconds} + ${durationSeconds}`,
-            })
+            .from(attendanceTable)
             .where(eq(attendanceTable.id, attendanceId));
 
-        return {
-            durationSeconds,
-        };
+        if (!attendance) {
+            throw new Error("Attendance not found");
+        }
+
+        if (attendance.status === "logged_out") {
+            throw new Error("User already logged out");
+        }
+
+        if (attendance.status !== "break") {
+            throw new Error("User is not on break");
+        }
+
+        return db.transaction(async (tx) => {
+            const [activeBreak] = await tx
+                .select()
+                .from(breakSessionTable)
+                .where(
+                    and(
+                        eq(breakSessionTable.attendanceId, attendanceId),
+                        isNull(breakSessionTable.endTime)
+                    )
+                );
+
+            if (!activeBreak) {
+                throw new Error("No active break found");
+            }
+
+            const endTime = new Date();
+
+            const durationSeconds = Math.floor(
+                (endTime.getTime() -
+                    activeBreak.startTime.getTime()) / 1000
+            );
+
+            await tx
+                .update(breakSessionTable)
+                .set({
+                    endTime,
+                    durationSeconds,
+                })
+                .where(eq(breakSessionTable.id, activeBreak.id));
+
+            await tx
+                .update(attendanceTable)
+                .set({
+                    status: "working",
+                    totalBreakSeconds:
+                        sql`${attendanceTable.totalBreakSeconds} + ${durationSeconds}`,
+                })
+                .where(eq(attendanceTable.id, attendanceId));
+
+            return {
+                durationSeconds,
+                resumedAt: endTime,
+            };
+        });
     },
     logout: async ({ attendanceId }: { attendanceId: string }) => {
         const [attendance] = await db
@@ -150,6 +195,7 @@ export const userController = {
         if (!attendance) {
             throw new Error("Attendance not found");
         }
+
         if (attendance.status === "logged_out") {
             return {
                 alreadyLoggedOut: true,
@@ -161,19 +207,51 @@ export const userController = {
 
         const logoutTime = new Date();
 
+        let totalBreakSeconds = attendance.totalBreakSeconds;
+
+        const [activeBreak] = await db
+            .select()
+            .from(breakSessionTable)
+            .where(
+                and(
+                    eq(breakSessionTable.attendanceId, attendanceId),
+                    isNull(breakSessionTable.endTime)
+                )
+            );
+
+        if (activeBreak) {
+            const breakDuration = Math.floor(
+                (logoutTime.getTime() -
+                    activeBreak.startTime.getTime()) / 1000
+            );
+
+            totalBreakSeconds += breakDuration;
+
+            await db
+                .update(breakSessionTable)
+                .set({
+                    endTime: logoutTime,
+                    durationSeconds: breakDuration,
+                })
+                .where(eq(breakSessionTable.id, activeBreak.id));
+        }
+
         const totalSeconds = Math.floor(
             (logoutTime.getTime() -
                 attendance.loginTime.getTime()) / 1000
         );
 
-        const workSeconds =
-            totalSeconds - attendance.totalBreakSeconds;
+        const workSeconds = Math.max(
+            0,
+            totalSeconds - totalBreakSeconds
+        );
 
         await db
             .update(attendanceTable)
             .set({
                 logoutTime,
                 totalWorkSeconds: workSeconds,
+                totalBreakSeconds,
                 status: "logged_out",
             })
             .where(eq(attendanceTable.id, attendanceId));
@@ -182,7 +260,7 @@ export const userController = {
             alreadyLoggedOut: false,
             logoutTime,
             totalWorkSeconds: workSeconds,
-            totalBreakSeconds: attendance.totalBreakSeconds,
+            totalBreakSeconds,
         };
     },
 

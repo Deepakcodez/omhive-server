@@ -13,22 +13,34 @@ export const userController = {
         return user
     },
     isLoggedIn: async ({ userId, date: today }: { userId: string, date: string }) => {
-        const [attendance] = await db
-            .select()
-            .from(attendanceTable)
-            .where(
-                and(
-                    eq(attendanceTable.userId, userId),
-                    eq(attendanceTable.date, today),
-                    isNull(attendanceTable.logoutTime)
-                )
-            );
-        return {
-            loggedIn: !!attendance,
-            attendanceId: attendance?.id ?? null,
-            loginTime: attendance?.loginTime ?? null,
-            status: attendance?.status ?? null,
-        };
+        console.log(userId, today)
+        try {
+            const [attendance] = await db
+                .select()
+                .from(attendanceTable)
+                .where(
+                    and(
+                        eq(attendanceTable.userId, userId),
+                        eq(attendanceTable.date, today),
+                        isNull(attendanceTable.logoutTime)
+                    )
+                );
+            console.log("attendance", attendance)
+            return {
+                loggedIn: !!attendance,
+                attendanceId: attendance?.id ?? null,
+                loginTime: attendance?.loginTime ?? null,
+                status: attendance?.status ?? null,
+            };
+        } catch (error) {
+            console.log("Error in isLoggedIn", error)
+            return {
+                loggedIn: false,
+                attendanceId: null,
+                loginTime: null,
+                status: null,
+            }
+        }
     },
     login: async ({ userName, startTime, hostname, systemUsername, os }: Login) => {
         const [user] = await db
@@ -73,13 +85,13 @@ export const userController = {
         }).returning()
 
         if (!attendance) {
-            throw new Error("Attendance not created")
+            throw new Error("Attendance not registered")
         }
         return {
             userId: user.id,
             username: user.userName,
-            attendanceId: attendance.id,
             existing: false,
+            attendanceId: attendance.id,
             loginTime: attendance.loginTime
 
         }
@@ -118,7 +130,6 @@ export const userController = {
             .where(eq(attendanceTable.id, attendanceId));
 
         return {
-            success: true,
             breakId: breakSession.id,
             startTime: breakSession.startTime,
         };

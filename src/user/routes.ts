@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { userController } from "./controller.js";
 import { validator } from "hono/validator";
-import { LoginSchema, UserSchema } from "./schema.js";
+import { isLoggedInSchema, LoginSchema, UserSchema } from "./schema.js";
 
 export const userRoute = new Hono()
     // get all user
@@ -26,11 +26,19 @@ export const userRoute = new Hono()
         })
 
     // is logged in
-    .post('/is-logged-in', async (c) => {
-        const { userId, date } = await c.req.json()
-        const user = await userController.isLoggedIn({ userId, date })
-        return c.json({ data: user, success: true }, 200)
-    })
+    .post('/is-logged-in',
+        validator('json', (value, c) => {
+            const parsed = isLoggedInSchema.safeParse(value)
+            if (!parsed.success) {
+                return c.json({ error: parsed.error.issues }, 401)
+            }
+            return parsed.data
+        }),
+        async (c) => {
+            const { userId, date } = c.req.valid('json')
+            const user = await userController.isLoggedIn({ userId, date })
+            return c.json({ data: user, success: true }, 200)
+        })
 
     // user login
     .post('/login',
@@ -42,29 +50,42 @@ export const userRoute = new Hono()
             return parsed.data
         }),
         async (c) => {
-            const { userName, startTime, hostname, systemUsername, os } = c.req.valid('json')
+            try {
+                const { userName, startTime, hostname, systemUsername, os } = c.req.valid('json')
 
-            const user = await userController.login({ userName, startTime, hostname, systemUsername, os })
-            return c.json({ data: user, success: true }, 200)
+                const user = await userController.login({ userName, startTime, hostname, systemUsername, os })
+                return c.json({ data: user, success: true, message: "User logged in" }, 200)
+            } catch (error: any) {
+                console.log("error in login", error)
+                return c.json({ data: null, success: false, message: error.message }, 500)
+            }
         })
     // user break
     .post('/break',
         async (c) => {
-            const { attendanceId } = await c.req.json()
-            if (!attendanceId) {
-                return c.json({ data: null, success: false, message: "Attendance ID is required" }, 400)
+            try {
+                const { attendanceId } = await c.req.json()
+                if (!attendanceId) {
+                    return c.json({ data: null, success: false, message: "Attendance ID is required" }, 400)
+                }
+                const breakData = await userController.break({ attendanceId })
+                return c.json({ data: breakData, success: true, message: "Break started" }, 200)
+            } catch (error: any) {
+                return c.json({ data: null, success: false, message: error.message }, 500)
             }
-            const user = await userController.break({ attendanceId })
-            return c.json({ data: user, success: true }, 200)
         })
     .post('/resume',
         async (c) => {
-            const { attendanceId } = await c.req.json()
-            if (!attendanceId) {
-                return c.json({ data: null, success: false, message: "Attendance ID is required" }, 400)
-            }
-            const user = await userController.resume({ attendanceId })
-            return c.json({ data: user, success: true }, 200)
+          try {
+              const { attendanceId } = await c.req.json()
+              if (!attendanceId) {
+                  return c.json({ data: null, success: false, message: "Attendance ID is required" }, 400)
+              }
+              const user = await userController.resume({ attendanceId })
+              return c.json({ data: user, success: true , message : ""}, 200)
+          } catch (error: any) {
+            return c.json({ data: null, success: false, message: error.message }, 500)
+          }
         })
 
     // user break

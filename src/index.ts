@@ -9,6 +9,11 @@ app.get('/', (c) => {
   console.log("api hit")
   return c.text('Hello Hono!')
 })
+app.post('/', async (c) => {
+  const body = await c.req.json();
+  console.log("sessions", body);
+  return c.text('Hello Hono!')
+})
 
 app.route('/api/user', userRoute)
 app.route('/api/activity', activityRoute)

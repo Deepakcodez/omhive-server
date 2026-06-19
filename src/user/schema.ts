@@ -15,5 +15,11 @@ export const LoginSchema = z.object({
     os: z.string().min(3),
 })
 
+export const isLoggedInSchema = z.object({
+    userId: z.string().min(1),
+    date: z.string().min(1),
+})
+
 export type User = z.infer<typeof UserSchema>
 export type Login = z.infer<typeof LoginSchema>
+export type IsLoggedIn = z.infer<typeof isLoggedInSchema>

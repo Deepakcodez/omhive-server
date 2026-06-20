@@ -16,21 +16,27 @@ const getDayRange = (date: string) => {
 };
 
 export const activityController = {
-  setActivity: async ({ activity }: { activity: Activity }) => {
-    const [session] = await db.insert(activitySession).values({
-      attendanceId: activity.attendanceId,
-      userId: activity.userId,
-      activityType: activity.activityType,
-      startTime: toDate(activity.startTime),
-      endTime: toDate(activity.endTime),
-      duration: activity.duration,
-      software: activity.software,
-      title: activity.title,
-      hostname: activity.hostname,
-      systemUsername: activity.systemUsername,
-    }).returning();
+  setActivity: async ({ activities }: { activities: Activity[] }) => {
+    console.log("session []", activities)
+    const sessions = await db
+      .insert(activitySession)
+      .values(
+        activities.map((activity) => ({
+          attendanceId: activity.attendanceId,
+          userId: activity.userId,
+          activityType: activity.activityType,
+          startTime: toDate(activity.startTime),
+          endTime: toDate(activity.endTime),
+          duration: Math.round(activity.duration),
+          software: activity.software,
+          title: activity.title,
+          hostname: activity.hostname,
+          systemUsername: activity.systemUsername,
+        }))
+      )
+      .returning();
 
-    return session;
+    return sessions;
   },
 
   getActivityById: async ({ id }: { id: string }) => {
@@ -85,7 +91,7 @@ export const activityController = {
     limit = 100,
   }: ActivityDateFilters) => {
     const { start, end } = getDayRange(date);
-
+ 
     return activityController.getActivitySessions({
       userId,
       attendanceId,

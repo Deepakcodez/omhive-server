@@ -99,7 +99,7 @@ export const activityRoute = new Hono()
           400,
         );
       }
-
+      console.log("fetching sessions...")
       const sessions = await activityController.getActivityByDate({
         date,
         userId: c.req.query("userId"),
@@ -107,7 +107,7 @@ export const activityRoute = new Hono()
         limit: getLimit(c.req.query("limit")),
       });
 
-      return c.json({ data: sessions, success: true }, 200);
+      return c.json({ data: sessions, success: true, message: "Fetched session successfully" }, 200);
     } catch (e: any) {
       const status = e.message === "Limit must be between 1 and 500" ? 400 : 500;
       return c.json(
@@ -143,8 +143,9 @@ export const activityRoute = new Hono()
   //set activity
   .post("/", async (c) => {
     try {
-      const { activity } = await c.req.json();
-      const result = await activityController.setActivity({ activity });
+      const activities = await c.req.json();
+      const result = await activityController.setActivity({ activities });
+      console.log("150", result)
       return c.json(
         { data: result, success: true, message: "Activity set successfully" },
         200,

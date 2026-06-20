@@ -12,6 +12,61 @@ export const userController = {
         }).returning()
         return user
     },
+    allUserWithLoginLogout: async () => {
+        const records = await db
+            .select({
+                id: usersTable.id,
+                userName: usersTable.userName,
+                fullName: usersTable.fullName,
+                phone: usersTable.phone,
+                attendanceId: attendanceTable.id,
+                date: attendanceTable.date,
+                loginTime: attendanceTable.loginTime,
+                logoutTime: attendanceTable.logoutTime,
+                expectedWorkSeconds: attendanceTable.expectedWorkSeconds,
+                totalWorkSeconds: attendanceTable.totalWorkSeconds,
+                totalBreakSeconds: attendanceTable.totalBreakSeconds,
+                status: attendanceTable.status,
+                hostname: attendanceTable.hostname,
+                systemUsername: attendanceTable.systemUsername,
+                os: attendanceTable.os,
+            })
+            .from(usersTable)
+            .leftJoin(attendanceTable, eq(usersTable.id, attendanceTable.userId))
+            .orderBy(usersTable.fullName, attendanceTable.date);
+
+        const usersMap = new Map<string, any>();
+
+        for (const record of records) {
+            if (!usersMap.has(record.id)) {
+                usersMap.set(record.id, {
+                    id: record.id,
+                    userName: record.userName,
+                    fullName: record.fullName,
+                    phone: record.phone,
+                    attendance: []
+                });
+            }
+
+            if (record.attendanceId) {
+                usersMap.get(record.id).attendance.push({
+                    id: record.attendanceId,
+                    date: record.date,
+                    loginTime: record.loginTime,
+                    logoutTime: record.logoutTime,
+                    expectedWorkSeconds: record.expectedWorkSeconds,
+                    totalWorkSeconds: record.totalWorkSeconds,
+                    totalBreakSeconds: record.totalBreakSeconds,
+                    status: record.status,
+                    hostname: record.hostname,
+                    systemUsername: record.systemUsername,
+                    os: record.os,
+                });
+            }
+        }
+
+        return Array.from(usersMap.values());
+    },
     isLoggedIn: async ({ userId, date: today }: { userId: string, date: string }) => {
         console.log(userId, today)
         try {

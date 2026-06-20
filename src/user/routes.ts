@@ -5,9 +5,23 @@ import { isLoggedInSchema, LoginSchema, UserSchema } from "./schema.js";
 
 export const userRoute = new Hono()
     // get all user
-    .get('/', async (c) => {
-        const users = await userController.allUser()
-        return c.json({ data: users, success: true }, 200)
+    .get('/list', async (c) => {
+        try {
+            const users = await userController.allUser()
+            return c.json({ data: users, success: true, message: "Fetched all user successfully" }, 200)
+        } catch (error: any) {
+            console.log("error in get all user", error)
+            return c.json({ data: null, success: false, message: error.message }, 500)
+        }
+    })
+    .get('/with-login-logout', async (c) => {
+        try {
+            const users = await userController.allUserWithLoginLogout()
+            return c.json({ data: users, success: true, message: "Fetched all user successfully" }, 200)
+        } catch (error: any) {
+            console.log("error in get all user", error)
+            return c.json({ data: null, success: false, message: error.message }, 500)
+        }
     })
 
     // create user

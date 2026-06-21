@@ -17,7 +17,7 @@ const getDayRange = (date: string) => {
 
 export const activityController = {
   setActivity: async ({ activities }: { activities: Activity[] }) => {
-    console.log("session []", activities)
+    console.log("sync controller")
     const sessions = await db
       .insert(activitySession)
       .values(
@@ -35,7 +35,7 @@ export const activityController = {
         }))
       )
       .returning();
-
+    console.log("👍👍👍synced : ", sessions)
     return sessions;
   },
 
@@ -91,7 +91,7 @@ export const activityController = {
     limit = 100,
   }: ActivityDateFilters) => {
     const { start, end } = getDayRange(date);
- 
+
     return activityController.getActivitySessions({
       userId,
       attendanceId,

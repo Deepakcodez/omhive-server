@@ -12,7 +12,7 @@ export const userController = {
         }).returning()
         return user
     },
-    allUserWithLoginLogout: async () => {
+    allUserWithLoginLogout: async ({ date }: { date: string }) => {
         const records = await db
             .select({
                 id: usersTable.id,
@@ -32,6 +32,7 @@ export const userController = {
                 os: attendanceTable.os,
             })
             .from(usersTable)
+            .where(eq(attendanceTable.date, date))
             .leftJoin(attendanceTable, eq(usersTable.id, attendanceTable.userId))
             .orderBy(usersTable.fullName, attendanceTable.date);
 

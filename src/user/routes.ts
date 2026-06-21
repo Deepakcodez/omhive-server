@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { userController } from "./controller.js";
 import { validator } from "hono/validator";
 import { isLoggedInSchema, LoginSchema, UserSchema } from "./schema.js";
+import { isValidDateParam } from "../activity/route.js";
 
 export const userRoute = new Hono()
     // get all user
@@ -14,9 +15,17 @@ export const userRoute = new Hono()
             return c.json({ data: null, success: false, message: error.message }, 500)
         }
     })
-    .get('/with-login-logout', async (c) => {
+    .get('/with-login-logout/:date', async (c) => {
         try {
-            const users = await userController.allUserWithLoginLogout()
+            const date = c.req.param('date');
+            if (!isValidDateParam(date)) {
+                return c.json(
+                    { data: null, success: false, message: "Date must be in YYYY-MM-DD format" },
+                    400,
+                );
+            }
+
+            const users = await userController.allUserWithLoginLogout({ date })
             return c.json({ data: users, success: true, message: "Fetched all user successfully" }, 200)
         } catch (error: any) {
             console.log("error in get all user", error)
@@ -90,16 +99,16 @@ export const userRoute = new Hono()
         })
     .post('/resume',
         async (c) => {
-          try {
-              const { attendanceId } = await c.req.json()
-              if (!attendanceId) {
-                  return c.json({ data: null, success: false, message: "Attendance ID is required" }, 400)
-              }
-              const user = await userController.resume({ attendanceId })
-              return c.json({ data: user, success: true , message : ""}, 200)
-          } catch (error: any) {
-            return c.json({ data: null, success: false, message: error.message }, 500)
-          }
+            try {
+                const { attendanceId } = await c.req.json()
+                if (!attendanceId) {
+                    return c.json({ data: null, success: false, message: "Attendance ID is required" }, 400)
+                }
+                const user = await userController.resume({ attendanceId })
+                return c.json({ data: user, success: true, message: "" }, 200)
+            } catch (error: any) {
+                return c.json({ data: null, success: false, message: error.message }, 500)
+            }
         })
 
     // user break

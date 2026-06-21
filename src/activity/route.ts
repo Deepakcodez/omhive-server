@@ -11,7 +11,7 @@ const getLimit = (value?: string) => {
   return limit;
 };
 
-const isValidDateParam = (date: string) => {
+export const isValidDateParam = (date: string) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return false;
   }
@@ -99,7 +99,6 @@ export const activityRoute = new Hono()
           400,
         );
       }
-      console.log("fetching sessions...")
       const sessions = await activityController.getActivityByDate({
         date,
         userId: c.req.query("userId"),
@@ -143,14 +142,15 @@ export const activityRoute = new Hono()
   //set activity
   .post("/", async (c) => {
     try {
+      console.log("syncing start")
       const activities = await c.req.json();
       const result = await activityController.setActivity({ activities });
-      console.log("150", result)
       return c.json(
         { data: result, success: true, message: "Activity set successfully" },
         200,
       );
     } catch (e: any) {
+      console.log("error : ", e)
       return c.json(
         { data: null, success: false, message: e.message ?? "Failed to set activity" },
         500,

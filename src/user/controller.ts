@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { attendanceTable, breakSessionTable, usersTable } from "../db/schema.js";
 import type { Login, User } from "./schema.js";
@@ -32,8 +32,12 @@ export const userController = {
                 os: attendanceTable.os,
             })
             .from(usersTable)
-            .where(eq(attendanceTable.date, date))
-            .leftJoin(attendanceTable, eq(usersTable.id, attendanceTable.userId))
+            .leftJoin(attendanceTable,
+                and(
+                    eq(usersTable.id, attendanceTable.userId),
+                    eq(attendanceTable.date, date)
+                )
+            )
             .orderBy(usersTable.fullName, attendanceTable.date);
 
         const usersMap = new Map<string, any>();
@@ -67,6 +71,62 @@ export const userController = {
         }
 
         return Array.from(usersMap.values());
+    },
+    getMonthAttendance: async ({
+        userId,
+        month,
+        year,
+
+    }: {
+        month: number;
+        year: number,
+
+        userId: string;
+    }) => {
+        const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+
+
+        const endDate = new Date(year, month, 0)
+            .toISOString()
+            .split("T")[0];
+
+        const attendance = await db
+            .select()
+            .from(attendanceTable)
+            .where(
+                and(
+                    eq(attendanceTable.userId, userId),
+                    gte(attendanceTable.date, startDate),
+                    lte(attendanceTable.date, endDate)
+                )
+            )
+            .orderBy(attendanceTable.date);
+
+        const totalDays = attendance.length;
+
+        const presentDays = attendance.filter(a => a.isPresent).length;
+
+        const totalWorkSeconds = attendance.reduce(
+            (sum, a) => sum + a.totalWorkSeconds,
+            0
+        );
+
+        const totalBreakSeconds = attendance.reduce(
+            (sum, a) => sum + a.totalBreakSeconds,
+            0
+        );
+
+
+
+        return {
+            attendance,
+            summary: {
+                totalDays,
+                presentDays,
+                totalWorkSeconds,
+                totalBreakSeconds,
+            },
+        };
     },
     isLoggedIn: async ({ userId, date: today }: { userId: string, date: string }) => {
         console.log(userId, today)

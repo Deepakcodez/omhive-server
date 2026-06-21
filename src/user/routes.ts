@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { userController } from "./controller.js";
 import { validator } from "hono/validator";
-import { isLoggedInSchema, LoginSchema, UserSchema } from "./schema.js";
+import { isLoggedInSchema, LoginSchema, MonthAttendanceSchema, UserSchema } from "./schema.js";
 import { isValidDateParam } from "../activity/route.js";
 
 export const userRoute = new Hono()
@@ -32,6 +32,24 @@ export const userRoute = new Hono()
             return c.json({ data: null, success: false, message: error.message }, 500)
         }
     })
+    .get('/attendance/month/:month/year/:year/userId/:userId',
+        validator('param', (value, c) => {
+            const parsed = MonthAttendanceSchema.safeParse(value)
+            if (!parsed.success) {
+                return c.json({ error: parsed.error.issues }, 401)
+            }
+            return parsed.data
+        }),
+        async (c) => {
+            try {
+                const { month, year, userId } = c.req.valid('param')
+                const users = await userController.getMonthAttendance({ month, year, userId })
+                return c.json({ data: users, success: true, message: "Fetched all user successfully" }, 200)
+            } catch (error: any) {
+                console.log("error in get all user", error)
+                return c.json({ data: null, success: false, message: error.message }, 500)
+            }
+        })
 
     // create user
     .post('/',

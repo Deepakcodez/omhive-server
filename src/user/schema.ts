@@ -20,6 +20,12 @@ export const isLoggedInSchema = z.object({
     date: z.string().min(1),
 })
 
+export const MonthAttendanceSchema = z.object({
+  month: z.coerce.number().min(1).max(12),
+  year: z.coerce.number(),
+  userId: z.string().uuid(),
+})
+
 export type User = z.infer<typeof UserSchema>
 export type Login = z.infer<typeof LoginSchema>
 export type IsLoggedIn = z.infer<typeof isLoggedInSchema>

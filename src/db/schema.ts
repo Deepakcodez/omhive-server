@@ -7,9 +7,9 @@ export const activityType = pgEnum('activity_type', ['work', 'break']);
 
 export const usersTable = pgTable("users", {
     id: uuid().primaryKey().defaultRandom().unique(),
-    userName: varchar({ length: 255 }).notNull(),
+    userName: varchar({ length: 255 }).unique().notNull(),
     fullName: varchar({ length: 255 }).notNull(),
-    phone: varchar({ length: 15 }).notNull(),
+    phone: varchar({ length: 15 }).unique().notNull(),
     createdAt: timestamp().defaultNow().notNull(),
 });
 

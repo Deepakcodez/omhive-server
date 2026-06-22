@@ -253,6 +253,7 @@ export const userController = {
     },
     login: async ({ userName, startTime, hostname, systemUsername, os }: Login) => {
         await userController.autoClosePreviousDayAttendances();
+
         const [user] = await db
             .select()
             .from(usersTable)
@@ -260,6 +261,16 @@ export const userController = {
         if (!user) {
             throw new Error("User not found")
         }
+        if (user.userName === process.env.ADMIN) {
+            return {
+                userId: user.id,
+                userName: user.userName,
+                existing: true,
+                attendanceId: null,
+                loginTime: null,
+            };
+        }
+
         const attendanceDate = new Date(startTime)
             .toISOString()
             .split('T')[0];

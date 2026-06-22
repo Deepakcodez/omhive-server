@@ -93,9 +93,15 @@ export const userRoute = new Hono()
         async (c) => {
             try {
                 const { userName, startTime, hostname, systemUsername, os } = c.req.valid('json')
+                console.log(userName)
+
 
                 const user = await userController.login({ userName, startTime, hostname, systemUsername, os })
-                return c.json({ data: user, success: true, message: "User logged in" }, 200)
+                if (user.userName == process.env.ADMIN) {
+                    return c.json({ data: user, success: true, message: "User logged in", isAdmin: true }, 200)
+                }
+                return c.json({ data: user, success: true, message: "User logged in", isAdmin: false }, 200)
+
             } catch (error: any) {
                 console.log("error in login", error)
                 return c.json({ data: null, success: false, message: error.message }, 500)

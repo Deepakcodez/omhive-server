@@ -1,4 +1,4 @@
-name: Deploy Dilbagh Sweets Backend
+name: Deploy omhive server
 
 
 on:
@@ -21,6 +21,6 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
           script: |
-            cd /www/wwwroot/dilbaghsweets/dilbagh_server
+            cd /www/wwwroot/omhive_server
             ./deploy.sh
 

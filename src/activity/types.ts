@@ -17,6 +17,7 @@ export type ActivityFilters = {
   from?: string;
   to?: string;
   limit?: number;
+  offset?: number
 };
 
 export type ActivityDateFilters = {
@@ -24,4 +25,5 @@ export type ActivityDateFilters = {
   userId?: string;
   attendanceId?: string;
   limit?: number;
+  page: number
 };

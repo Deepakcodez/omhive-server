@@ -92,6 +92,8 @@ export const activityRoute = new Hono()
   .get("/date/:date", async (c) => {
     try {
       const date = c.req.param("date");
+      const page = Number(c.req.query("page") ?? 1);
+      const limit = getLimit(c.req.query("limit"));
 
       if (!isValidDateParam(date)) {
         return c.json(
@@ -99,11 +101,13 @@ export const activityRoute = new Hono()
           400,
         );
       }
+
       const sessions = await activityController.getActivityByDate({
         date,
         userId: c.req.query("userId"),
         attendanceId: c.req.query("attendanceId"),
-        limit: getLimit(c.req.query("limit")),
+        page,
+        limit
       });
 
       return c.json({ data: sessions, success: true, message: "Fetched session successfully" }, 200);

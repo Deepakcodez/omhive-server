@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte, count } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { activitySession } from "../db/schema.js";
 import type { Activity, ActivityDateFilters, ActivityFilters } from "./types.js";
@@ -55,6 +55,7 @@ export const activityController = {
     from,
     to,
     limit = 100,
+    offset = 1,
   }: ActivityFilters) => {
     const conditions = [];
 
@@ -74,20 +75,39 @@ export const activityController = {
       conditions.push(lte(activitySession.startTime, new Date(to)));
     }
 
-    const query = db
-      .select()
-      .from(activitySession)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(asc(activitySession.startTime))
-      .limit(limit);
+    const whereClause =
+      conditions.length > 0 ? and(...conditions) : undefined;
 
-    return query;
+    const [data, totalResult] = await Promise.all([
+      db
+        .select()
+        .from(activitySession)
+        .where(whereClause)
+        .orderBy(desc(activitySession.startTime))
+        .limit(limit)
+        .offset(offset),
+
+      db
+        .select({
+          count: count(),
+        })
+        .from(activitySession)
+        .where(whereClause),
+    ]);
+
+    return {
+      data,
+      total: totalResult[0]?.count ?? 0,
+      limit,
+      offset,
+    };
   },
 
   getActivityByDate: async ({
     date,
     userId,
     attendanceId,
+    page,
     limit = 100,
   }: ActivityDateFilters) => {
     const { start, end } = getDayRange(date);
@@ -98,6 +118,7 @@ export const activityController = {
       from: start.toISOString(),
       to: end.toISOString(),
       limit,
+      offset: (page - 1) * limit,
     });
   },
 };

@@ -6,8 +6,7 @@ import { activityRoute } from './activity/route.js'
 const app = new Hono()
 
 app.get('/', (c) => {
-  console.log("api hit")
-  return c.text('Hello Hono!')
+  return c.text('Hello from omhive_server')
 })
 app.post('/', async (c) => {
   const body = await c.req.json();

@@ -12,6 +12,99 @@ export const userController = {
         }).returning()
         return user
     },
+    autoClosePreviousDayAttendances: async () => {
+        const today = new Date().toISOString().split('T')[0];
+
+        const activeAttendances = await db
+            .select()
+            .from(attendanceTable)
+            .where(isNull(attendanceTable.logoutTime));
+
+        for (const attendance of activeAttendances) {
+            // Skip today's active attendance
+            if (attendance.date >= today) continue;
+
+            // Auto logout at end of attendance date
+            const logoutTime = new Date(
+                `${attendance.date}T23:59:59.999`
+            );
+
+            let totalBreakSeconds = attendance.totalBreakSeconds;
+
+            // Check if user forgot to resume break
+            const [activeBreak] = await db
+                .select()
+                .from(breakSessionTable)
+                .where(
+                    and(
+                        eq(
+                            breakSessionTable.attendanceId,
+                            attendance.id
+                        ),
+                        isNull(breakSessionTable.endTime)
+                    )
+                );
+
+            if (activeBreak) {
+                const breakDuration = Math.floor(
+                    (logoutTime.getTime() -
+                        activeBreak.startTime.getTime()) /
+                    1000
+                );
+
+                totalBreakSeconds += breakDuration;
+
+                await db
+                    .update(breakSessionTable)
+                    .set({
+                        endTime: logoutTime,
+                        durationSeconds: breakDuration,
+                    })
+                    .where(
+                        eq(
+                            breakSessionTable.id,
+                            activeBreak.id
+                        )
+                    );
+            }
+
+            const totalSeconds = Math.floor(
+                (logoutTime.getTime() -
+                    attendance.loginTime.getTime()) /
+                1000
+            );
+
+            const workSeconds = Math.max(
+                0,
+                totalSeconds - totalBreakSeconds
+            );
+
+            await db
+                .update(attendanceTable)
+                .set({
+                    logoutTime,
+                    totalWorkSeconds: workSeconds,
+                    totalBreakSeconds,
+                    status: 'logged_out',
+                })
+                .where(
+                    eq(
+                        attendanceTable.id,
+                        attendance.id
+                    )
+                );
+
+            console.log(
+                `Auto logged out attendance ${attendance.id}`
+            );
+        }
+
+        return {
+            success: true,
+            message:
+                'Previous day attendance records processed successfully',
+        };
+    },
     allUserWithLoginLogout: async ({ date }: { date: string }) => {
         const records = await db
             .select({
@@ -159,6 +252,7 @@ export const userController = {
         }
     },
     login: async ({ userName, startTime, hostname, systemUsername, os }: Login) => {
+        await userController.autoClosePreviousDayAttendances();
         const [user] = await db
             .select()
             .from(usersTable)
@@ -205,7 +299,7 @@ export const userController = {
         }
         return {
             userId: user.id,
-            username: user.userName,
+            userName: user.userName,
             existing: false,
             attendanceId: attendance.id,
             loginTime: attendance.loginTime

@@ -261,40 +261,33 @@ export const userController = {
         if (!user) {
             throw new Error("User not found")
         }
-        if (user.userName === process.env.ADMIN) {
-            return {
-                userId: user.id,
-                userName: user.userName,
-                existing: true,
-                attendanceId: null,
-                loginTime: null,
-            };
-        }
-
-        const attendanceDate = new Date(startTime)
-            .toISOString()
-            .split('T')[0];
-
-        const existingAttendance = await db
+        const [activeAttendance] = await db
             .select()
             .from(attendanceTable)
             .where(
                 and(
                     eq(attendanceTable.userId, user.id),
-                    eq(attendanceTable.date, attendanceDate)
+                    isNull(attendanceTable.logoutTime)
                 )
-            )
-            .limit(1);
+            );
 
-        if (existingAttendance.length > 0) {
+        if (activeAttendance) {
             return {
                 userId: user.id,
                 userName: user.userName,
+                attendanceId: activeAttendance.id,
+                loginTime: activeAttendance.loginTime,
+                status: activeAttendance.status,
                 existing: true,
-                attendanceId: existingAttendance[0].id,
-                loginTime: existingAttendance[0].loginTime
             };
         }
+
+
+
+        const attendanceDate = new Date(startTime)
+            .toISOString()
+            .split('T')[0];
+
 
         const [attendance] = await db.insert(attendanceTable).values({
             userId: user.id,
@@ -311,9 +304,10 @@ export const userController = {
         return {
             userId: user.id,
             userName: user.userName,
-            existing: false,
             attendanceId: attendance.id,
-            loginTime: attendance.loginTime
+            loginTime: attendance.loginTime,
+            status: attendance.status,
+            existing: false,
 
         }
     },
@@ -343,16 +337,17 @@ export const userController = {
             })
             .returning();
 
-        await db
+        const [updatedAttendance] = await db
             .update(attendanceTable)
             .set({
                 status: "break",
             })
-            .where(eq(attendanceTable.id, attendanceId));
+            .where(eq(attendanceTable.id, attendanceId)).returning();
 
         return {
             breakId: breakSession.id,
             startTime: breakSession.startTime,
+            status: updatedAttendance.status
         };
     },
     resume: async ({ attendanceId }: { attendanceId: string }) => {
@@ -415,6 +410,7 @@ export const userController = {
             return {
                 durationSeconds,
                 resumedAt: endTime,
+                status: 'working'
             };
         });
     },

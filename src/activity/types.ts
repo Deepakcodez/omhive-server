@@ -1,4 +1,5 @@
 export type Activity = {
+  syncId: string;
   startTime: Date | string;
   endTime: Date | string;
   duration: number;

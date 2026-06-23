@@ -1,5 +1,5 @@
 {
-  "id": "49d3cae6-d7ea-4cfb-85ca-ca8a2bf95d28",
+  "id": "2722053a-ac18-485c-b268-c13fa2433839",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -12,6 +12,13 @@
           "name": "id",
           "type": "uuid",
           "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "syncId": {
+          "name": "syncId",
+          "type": "uuid",
+          "primaryKey": false,
           "notNull": true
         },
         "attendanceId": {
@@ -54,19 +61,19 @@
         },
         "software": {
           "name": "software",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "title": {
           "name": "title",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "hostname": {
           "name": "hostname",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
@@ -77,7 +84,74 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "activity_user_idx": {
+          "name": "activity_user_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "activity_attendance_idx": {
+          "name": "activity_attendance_idx",
+          "columns": [
+            {
+              "expression": "attendanceId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "activity_start_idx": {
+          "name": "activity_start_idx",
+          "columns": [
+            {
+              "expression": "startTime",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "activity_user_time_idx": {
+          "name": "activity_user_time_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "startTime",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "activitysession_attendanceId_attendance_id_fk": {
           "name": "activitysession_attendanceId_attendance_id_fk",
@@ -108,11 +182,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "activitysession_id_unique": {
-          "name": "activitysession_id_unique",
+        "activitysession_syncId_unique": {
+          "name": "activitysession_syncId_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "id"
+            "syncId"
           ]
         }
       },
@@ -217,7 +291,44 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "attendance_user_date_idx": {
+          "name": "attendance_user_date_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "attendance_status_idx": {
+          "name": "attendance_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "attendance_userId_users_id_fk": {
           "name": "attendance_userId_users_id_fk",
@@ -306,10 +417,11 @@
           "name": "id",
           "type": "uuid",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
-        "username": {
-          "name": "username",
+        "userName": {
+          "name": "userName",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
@@ -318,13 +430,27 @@
           "name": "fullName",
           "type": "varchar(255)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "phone": {
           "name": "phone",
           "type": "varchar(15)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
+        },
+        "is_admin": {
+          "name": "is_admin",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
         },
         "createdAt": {
           "name": "createdAt",
@@ -334,15 +460,53 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "users_username_idx": {
+          "name": "users_username_idx",
+          "columns": [
+            {
+              "expression": "userName",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "users_phone_idx": {
+          "name": "users_phone_idx",
+          "columns": [
+            {
+              "expression": "phone",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "users_id_unique": {
-          "name": "users_id_unique",
+        "users_userName_unique": {
+          "name": "users_userName_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "id"
+            "userName"
+          ]
+        },
+        "users_phone_unique": {
+          "name": "users_phone_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "phone"
           ]
         }
       },

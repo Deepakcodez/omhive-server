@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1781699757451,
-      "tag": "0000_military_rumiko_fujikawa",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1781701213234,
-      "tag": "0001_last_shocker",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1781702205865,
-      "tag": "0002_massive_the_stranger",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1781702351111,
-      "tag": "0003_confused_boomerang",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1782050103381,
-      "tag": "0004_natural_james_howlett",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1782051489543,
-      "tag": "0005_clear_terrax",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1782215925322,
-      "tag": "0006_clammy_groot",
+      "when": 1782249216810,
+      "tag": "0000_lovely_mattie_franklin",
       "breakpoints": true
     }
   ]

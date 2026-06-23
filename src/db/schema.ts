@@ -1,4 +1,4 @@
-import { boolean, date, integer, pgEnum, pgTable, text, timestamp, unique, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, date, index, integer, pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 
 
 export const workStatus = pgEnum('work_status', ['working', 'break', 'logged_out']);
@@ -6,13 +6,19 @@ export const activityType = pgEnum('activity_type', ['work', 'break']);
 
 
 export const usersTable = pgTable("users", {
-    id: uuid().primaryKey().defaultRandom().unique(),
+    id: uuid().primaryKey().defaultRandom(),
     userName: varchar({ length: 255 }).unique().notNull(),
     fullName: varchar({ length: 255 }).notNull(),
     phone: varchar({ length: 15 }).unique().notNull(),
     isAdmin: boolean("is_admin").default(false).notNull(),
+    isActive: boolean().default(true).notNull(),
     createdAt: timestamp().defaultNow().notNull(),
-});
+},
+    (table) => ({
+        usernameIdx: uniqueIndex("users_username_idx").on(table.userName),
+        phoneIdx: uniqueIndex("users_phone_idx").on(table.phone),
+    })
+);
 
 export const attendanceTable = pgTable("attendance", {
     id: uuid().primaryKey().defaultRandom(),
@@ -30,7 +36,16 @@ export const attendanceTable = pgTable("attendance", {
     os: varchar({ length: 100 }).notNull(),
     createdAt: timestamp().defaultNow().notNull(),
 
-},);
+}, (table) => ({
+    userDateIdx: index("attendance_user_date_idx").on(
+        table.userId,
+        table.date
+    ),
+
+    statusIdx: index("attendance_status_idx").on(
+        table.status
+    ),
+}));
 
 export const breakSessionTable = pgTable("break_sessions", {
     id: uuid().primaryKey().defaultRandom(),
@@ -41,7 +56,8 @@ export const breakSessionTable = pgTable("break_sessions", {
 });
 
 export const activitySession = pgTable("activitysession", {
-    id: uuid().primaryKey().defaultRandom().unique(),
+    id: uuid().primaryKey().defaultRandom(),
+    syncId: uuid().notNull().unique(),
     attendanceId: uuid().notNull().references(() => attendanceTable.id),
     userId: uuid().notNull().references(() => usersTable.id),
     activityType: activityType('activity_type').default('work').notNull(),
@@ -52,7 +68,24 @@ export const activitySession = pgTable("activitysession", {
     title: text().notNull(),
     hostname: text().notNull(),
     systemUsername: varchar({ length: 255 }).notNull(),
-})
+},
+
+    (table) => ({
+        userIdx: index("activity_user_idx").on(table.userId),
+
+        attendanceIdx: index("activity_attendance_idx").on(
+            table.attendanceId
+        ),
+
+        startTimeIdx: index("activity_start_idx").on(
+            table.startTime
+        ),
+
+        userTimeIdx: index("activity_user_time_idx").on(
+            table.userId,
+            table.startTime
+        ),
+    }))
 
 
 

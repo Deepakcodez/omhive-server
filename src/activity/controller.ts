@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, lte, count } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte, count, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { activitySession } from "../db/schema.js";
 import type { Activity, ActivityDateFilters, ActivityFilters } from "./types.js";
@@ -22,6 +22,7 @@ export const activityController = {
       .insert(activitySession)
       .values(
         activities.map((activity) => ({
+          syncId: activity.syncId,
           attendanceId: activity.attendanceId,
           userId: activity.userId,
           activityType: activity.activityType,
@@ -33,7 +34,13 @@ export const activityController = {
           hostname: activity.hostname,
           systemUsername: activity.systemUsername,
         }))
-      )
+      ).onConflictDoUpdate({
+        target: activitySession.syncId,
+        set: {
+          endTime: sql`excluded."endTime"`,
+          duration: sql`excluded.duration`,
+        }
+      })
       .returning();
     console.log("👍👍👍synced : ", sessions)
     return sessions;

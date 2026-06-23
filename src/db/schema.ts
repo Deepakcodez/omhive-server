@@ -10,6 +10,7 @@ export const usersTable = pgTable("users", {
     userName: varchar({ length: 255 }).unique().notNull(),
     fullName: varchar({ length: 255 }).notNull(),
     phone: varchar({ length: 15 }).unique().notNull(),
+    isAdmin: boolean("is_admin").default(false).notNull(),
     createdAt: timestamp().defaultNow().notNull(),
 });
 

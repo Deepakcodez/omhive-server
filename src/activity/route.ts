@@ -101,7 +101,6 @@ export const activityRoute = new Hono()
           400,
         );
       }
-
       const sessions = await activityController.getActivityByDate({
         date,
         userId: c.req.query("userId"),

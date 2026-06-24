@@ -14,10 +14,10 @@ export const usersTable = pgTable("users", {
     isActive: boolean().default(true).notNull(),
     createdAt: timestamp().defaultNow().notNull(),
 },
-    (table) => ({
-        usernameIdx: uniqueIndex("users_username_idx").on(table.userName),
-        phoneIdx: uniqueIndex("users_phone_idx").on(table.phone),
-    })
+    (table) => [
+        uniqueIndex("users_username_idx").on(table.userName),
+        uniqueIndex("users_phone_idx").on(table.phone),
+    ]
 );
 
 export const attendanceTable = pgTable("attendance", {
@@ -29,6 +29,7 @@ export const attendanceTable = pgTable("attendance", {
     expectedWorkSeconds: integer().notNull().default(9 * 60 * 60), // 9 hours
     totalWorkSeconds: integer().notNull().default(0),
     totalBreakSeconds: integer().notNull().default(0),
+    totalIdleSeconds: integer().default(0),
     isPresent: boolean().notNull().default(true),
     status: workStatus('status').notNull().default('working'),
     hostname: varchar({ length: 255 }).notNull(),
@@ -36,16 +37,15 @@ export const attendanceTable = pgTable("attendance", {
     os: varchar({ length: 100 }).notNull(),
     createdAt: timestamp().defaultNow().notNull(),
 
-}, (table) => ({
-    userDateIdx: index("attendance_user_date_idx").on(
+}, (table) => [
+    index("attendance_user_date_idx").on(
         table.userId,
         table.date
     ),
-
-    statusIdx: index("attendance_status_idx").on(
+    index("attendance_status_idx").on(
         table.status
     ),
-}));
+]);
 
 export const breakSessionTable = pgTable("break_sessions", {
     id: uuid().primaryKey().defaultRandom(),
@@ -70,22 +70,55 @@ export const activitySession = pgTable("activitysession", {
     systemUsername: varchar({ length: 255 }).notNull(),
 },
 
-    (table) => ({
-        userIdx: index("activity_user_idx").on(table.userId),
-
-        attendanceIdx: index("activity_attendance_idx").on(
+    (table) => [
+        index("activity_user_idx").on(table.userId),
+        index("activity_attendance_idx").on(
             table.attendanceId
         ),
-
-        startTimeIdx: index("activity_start_idx").on(
+        index("activity_start_idx").on(
             table.startTime
         ),
-
-        userTimeIdx: index("activity_user_time_idx").on(
+        index("activity_user_time_idx").on(
             table.userId,
             table.startTime
         ),
-    }))
+    ])
 
 
 
+export const idleSessionTable = pgTable(
+    "idle_sessions",
+    {
+        id: uuid().primaryKey().defaultRandom(),
+
+        attendanceId: uuid()
+            .notNull()
+            .references(() => attendanceTable.id),
+
+        userId: uuid()
+            .notNull()
+            .references(() => usersTable.id),
+
+        startTime: timestamp().notNull(),
+        endTime: timestamp(),
+
+        durationSeconds: integer()
+            .notNull()
+            .default(0),
+
+        createdAt: timestamp().defaultNow().notNull(),
+    },
+    (table) => [
+        index("idle_attendance_idx").on(
+            table.attendanceId
+        ),
+
+        index("idle_user_idx").on(
+            table.userId
+        ),
+
+        index("idle_start_idx").on(
+            table.startTime
+        ),
+    ]
+)

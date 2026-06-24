@@ -1,6 +1,6 @@
 {
-  "id": "2bfa7aa3-4e66-415f-ae61-e58a9a662b89",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "bb8f9d5a-fbf7-4b99-901a-ea9807def0b0",
+  "prevId": "2bfa7aa3-4e66-415f-ae61-e58a9a662b89",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -395,6 +395,137 @@
           "tableTo": "attendance",
           "columnsFrom": [
             "attendanceId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.idle_sessions": {
+      "name": "idle_sessions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "attendanceId": {
+          "name": "attendanceId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "startTime": {
+          "name": "startTime",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "endTime": {
+          "name": "endTime",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "durationSeconds": {
+          "name": "durationSeconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idle_attendance_idx": {
+          "name": "idle_attendance_idx",
+          "columns": [
+            {
+              "expression": "attendanceId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idle_user_idx": {
+          "name": "idle_user_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idle_start_idx": {
+          "name": "idle_start_idx",
+          "columns": [
+            {
+              "expression": "startTime",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "idle_sessions_attendanceId_attendance_id_fk": {
+          "name": "idle_sessions_attendanceId_attendance_id_fk",
+          "tableFrom": "idle_sessions",
+          "tableTo": "attendance",
+          "columnsFrom": [
+            "attendanceId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "idle_sessions_userId_users_id_fk": {
+          "name": "idle_sessions_userId_users_id_fk",
+          "tableFrom": "idle_sessions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "userId"
           ],
           "columnsTo": [
             "id"

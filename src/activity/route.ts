@@ -47,6 +47,32 @@ export const activityRoute = new Hono()
       );
     }
   })
+  .get("/get", async (c) => {
+    try {
+      const attendanceId =
+        c.req.query("attendanceId")
+
+      const userId =
+        c.req.query("userId")
+
+      const date =
+        c.req.query("date")
+      console.log("get query  data line 61")
+      console.log("data : ", date, " attendance :", attendanceId, " userId :", userId)
+      return c.json({
+        data: null,
+        success: true,
+        message: "success to get activity sessions by date"
+      })
+    } catch (e: any) {
+      console.log("error", e)
+      return c.json({
+        data: null,
+        success: false,
+        message: "Failed to get activity sessions by date"
+      })
+    }
+  })
 
   // get activity sessions for a user
   .get("/user/:userId", async (c) => {
@@ -159,4 +185,43 @@ export const activityRoute = new Hono()
         500,
       );
     }
+  })
+  .post("/start-idle-session", async (c) => {
+    try {
+      const { attendanceId, userId, startTime } = await c.req.json();
+      console.log("start ideal session   attendance :", attendanceId, "userId :", userId, "startTime :", startTime)
+      const result = await activityController.startIdleSession({ attendanceId, userId, startTime });
+      console.log("start idle session result", result)
+      return c.json(
+        { data: result, success: true, message: "Idle session set successfully" },
+        200,
+      );
+    } catch (e: any) {
+      console.log("error : ", e)
+      return c.json(
+        { data: null, success: false, message: e.message ?? "Failed to set idle session" },
+        500,
+      );
+    }
+  })
+  .post("/stop-idle-session", async (c) => {
+    try {
+      const { attendanceId, endTime } = await c.req.json();
+      console.log("stopping idle session attendance :", attendanceId, "endTime :", endTime)
+      const result = await activityController.stopIdleSession({ attendanceId, endTime });
+      console.log("stop idle session result", result)
+
+      return c.json(
+        { data: result, success: true, message: "Idle session set successfully" },
+        200,
+      );
+    } catch (e: any) {
+      console.log("error : ", e)
+      return c.json(
+        { data: null, success: false, message: e.message ?? "Failed to set idle session" },
+        500,
+      );
+    }
   });
+
+

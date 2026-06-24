@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, gte, lte, count, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte, count, sql, isNull } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { activitySession } from "../db/schema.js";
+import { activitySession, attendanceTable, idleSessionTable } from "../db/schema.js";
 import type { Activity, ActivityDateFilters, ActivityFilters } from "./types.js";
 
 const toDate = (value: Date | string) =>
@@ -16,6 +16,57 @@ const getDayRange = (date: string) => {
 };
 
 export const activityController = {
+
+
+  getActivity: async ({
+    attendanceId,
+    userId,
+    date
+  }: {
+    attendanceId?: string
+    userId?: string
+    date?: string
+  }) => {
+
+    if (attendanceId) {
+      const [attendance] = await db
+        .select()
+        .from(attendanceTable)
+        .where(eq(attendanceTable.id, attendanceId))
+
+      if (!attendance) {
+        throw new Error("Attendance not found")
+      }
+
+      const activities = await db
+        .select()
+        .from(activitySession)
+        .where(
+          eq(
+            activitySession.attendanceId,
+            attendanceId
+          )
+        )
+
+      const idleSessions = await db
+        .select()
+        .from(idleSessionTable)
+        .where(
+          eq(
+            idleSessionTable.attendanceId,
+            attendanceId
+          )
+        )
+
+      return {
+        attendance,
+        activities,
+        idleSessions
+      }
+    }
+    
+  },
+
   setActivity: async ({ activities }: { activities: Activity[] }) => {
     console.log("sync controller")
     const sessions = await db
@@ -128,4 +179,96 @@ export const activityController = {
       offset: (page - 1) * limit,
     });
   },
+  startIdleSession: async ({
+    attendanceId,
+    userId,
+    startTime,
+  }: {
+    attendanceId: string
+    userId: string
+    startTime: string
+  }) => {
+    // Check for an existing active idle session
+    const [existing] = await db
+      .select()
+      .from(idleSessionTable)
+      .where(
+        and(
+          eq(idleSessionTable.attendanceId, attendanceId),
+          isNull(idleSessionTable.endTime)
+        )
+      )
+      .limit(1)
+
+    // Prevent duplicate idle sessions
+    if (existing) {
+      return existing
+    }
+
+    const [idleSession] = await db
+      .insert(idleSessionTable)
+      .values({
+        attendanceId,
+        userId,
+        startTime: new Date(startTime),
+      })
+      .returning()
+
+    return idleSession
+  },
+
+  stopIdleSession: async ({
+    attendanceId,
+    endTime
+  }: {
+    attendanceId: string
+    endTime: string
+  }) => {
+
+    const [activeIdle] = await db
+      .select()
+      .from(idleSessionTable)
+      .where(
+        and(
+          eq(idleSessionTable.attendanceId, attendanceId),
+          isNull(idleSessionTable.endTime)
+        )
+      )
+      .limit(1)
+
+    if (!activeIdle) {
+      throw new Error("No active idle session found")
+    }
+
+    const idleEndTime = new Date(endTime)
+
+    const duration = Math.floor(
+      (idleEndTime.getTime() -
+        activeIdle.startTime.getTime()) / 1000
+    )
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(idleSessionTable)
+        .set({
+          endTime: idleEndTime,
+          durationSeconds: duration
+        })
+        .where(eq(idleSessionTable.id, activeIdle.id))
+
+      await tx
+        .update(attendanceTable)
+        .set({
+          totalIdleSeconds: sql`
+          ${attendanceTable.totalIdleSeconds} + ${duration}
+        `
+        })
+        .where(eq(attendanceTable.id, attendanceId))
+    })
+
+    return {
+      success: true,
+      duration
+    }
+  }
 };

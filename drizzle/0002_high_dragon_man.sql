@@ -1,0 +1,1 @@
+ALTER TABLE "attendance" ADD COLUMN "totalIdleSeconds" integer DEFAULT 0;

@@ -74,6 +74,14 @@ export const attendanceController = {
             })
         }
 
+        for (const user of usersMap.values()) {
+            user.sessions.sort(
+                (a: any, b: any) =>
+                    new Date(b.loginTime).getTime() -
+                    new Date(a.loginTime).getTime()
+            )
+        }
+
         return Array.from(usersMap.values())
     }
 }

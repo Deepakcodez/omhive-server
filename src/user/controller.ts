@@ -351,24 +351,29 @@ export const userController = {
         };
     },
     resume: async ({ attendanceId }: { attendanceId: string }) => {
+        console.log("resume called", attendanceId)
         const [attendance] = await db
             .select()
             .from(attendanceTable)
             .where(eq(attendanceTable.id, attendanceId));
-
+        console.log("resume called attendance", attendance)
         if (!attendance) {
+            console.log("inside attendance not found")
             throw new Error("Attendance not found");
         }
 
         if (attendance.status === "logged_out") {
+            console.log("inside user already logged out")
             throw new Error("User already logged out");
         }
 
         if (attendance.status !== "break") {
+            console.log("inside user is not on break")
             throw new Error("User is not on break");
         }
-
+        console.log("inside transaction")
         return db.transaction(async (tx) => {
+            console.log("inside transaction 2")
             const [activeBreak] = await tx
                 .select()
                 .from(breakSessionTable)
@@ -380,15 +385,17 @@ export const userController = {
                 );
 
             if (!activeBreak) {
+                console.log("inside no active break found")
                 throw new Error("No active break found");
             }
-
+            console.log("inside transaction 3")
             const endTime = new Date();
-
+            console.log("inside transaction 4")
             const durationSeconds = Math.floor(
                 (endTime.getTime() -
                     activeBreak.startTime.getTime()) / 1000
             );
+            console.log("inside transaction 5")
 
             await tx
                 .update(breakSessionTable)
@@ -398,6 +405,7 @@ export const userController = {
                 })
                 .where(eq(breakSessionTable.id, activeBreak.id));
 
+            console.log("inside transaction 6")
             await tx
                 .update(attendanceTable)
                 .set({

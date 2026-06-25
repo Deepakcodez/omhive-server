@@ -251,7 +251,7 @@ export const userController = {
             }
         }
     },
-    login: async ({ userName, startTime, hostname, systemUsername, os }: Login) => {
+    login: async ({ userName, startTime, hostname, systemUsername, os, timezone }: Login) => {
         await userController.autoClosePreviousDayAttendances();
 
         const [user] = await db
@@ -284,9 +284,10 @@ export const userController = {
 
 
 
-        const attendanceDate = new Date(startTime)
-            .toISOString()
-            .split('T')[0];
+        const attendanceDate =
+            new Intl.DateTimeFormat('en-CA', {
+                timeZone: timezone,
+            }).format(new Date(startTime));
 
 
         const [attendance] = await db.insert(attendanceTable).values({

@@ -64,7 +64,7 @@ export const activityController = {
         idleSessions
       }
     }
-    
+
   },
 
   setActivity: async ({ activities }: { activities: Activity[] }) => {
@@ -93,7 +93,7 @@ export const activityController = {
         }
       })
       .returning();
-    console.log("👍👍👍synced : ", sessions)
+    console.log("👍👍👍synced : ", sessions.length)
     return sessions;
   },
 
@@ -117,24 +117,37 @@ export const activityController = {
   }: ActivityFilters) => {
     const conditions = [];
 
-    if (userId) {
-      conditions.push(eq(activitySession.userId, userId));
-    }
-
     if (attendanceId) {
-      conditions.push(eq(activitySession.attendanceId, attendanceId));
-    }
+      // Specific session selected
+      conditions.push(
+        eq(activitySession.attendanceId, attendanceId)
+      );
+    } else {
+      // Entire day selected
+      if (userId) {
+        conditions.push(
+          eq(activitySession.userId, userId)
+        );
+      }
 
-    if (from) {
-      conditions.push(gte(activitySession.startTime, new Date(from)));
-    }
+      if (from) {
+        conditions.push(
+          gte(activitySession.startTime, new Date(from))
+        );
+      }
 
-    if (to) {
-      conditions.push(lte(activitySession.startTime, new Date(to)));
+      if (to) {
+        conditions.push(
+          lte(activitySession.startTime, new Date(to))
+        );
+      }
     }
 
     const whereClause =
       conditions.length > 0 ? and(...conditions) : undefined;
+
+
+
 
     const [data, totalResult] = await Promise.all([
       db
@@ -153,6 +166,7 @@ export const activityController = {
         .where(whereClause),
     ]);
 
+    console.log("activity data : ", data)
     return {
       data,
       total: totalResult[0]?.count ?? 0,
@@ -169,7 +183,7 @@ export const activityController = {
     limit = 100,
   }: ActivityDateFilters) => {
     const { start, end } = getDayRange(date);
-
+    console.log('date ->', date, ' start ->', start, ' end ->', end, 'user id ->', userId, 'attendace id ->', attendanceId, 'page ->', page)
     return activityController.getActivitySessions({
       userId,
       attendanceId,

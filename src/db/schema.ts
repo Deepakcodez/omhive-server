@@ -35,6 +35,7 @@ export const attendanceTable = pgTable("attendance", {
     hostname: varchar({ length: 255 }).notNull(),
     systemUsername: varchar({ length: 255 }).notNull(),
     os: varchar({ length: 100 }).notNull(),
+    lastSeen: timestamp(),
     createdAt: timestamp().defaultNow().notNull(),
 
 }, (table) => [

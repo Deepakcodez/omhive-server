@@ -1,5 +1,8 @@
 import { Hono } from "hono";
 import { activityController } from "./controller.js";
+import { db } from "../db/index.js";
+import { eq } from "drizzle-orm";
+import { attendanceTable } from "../db/schema.js";
 
 const getLimit = (value?: string) => {
   const limit = value ? Number(value) : 100;
@@ -21,6 +24,8 @@ export const isValidDateParam = (date: string) => {
 };
 
 export const activityRoute = new Hono()
+
+
   // get activity sessions by userId, attendanceId, or date range
   .get("/", async (c) => {
     try {

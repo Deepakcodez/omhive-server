@@ -3,7 +3,7 @@ import { Hono } from 'hono'
 import { userRoute } from './user/routes.js'
 import { activityRoute } from './activity/route.js'
 import { attendanceRoute } from './attendance/routes.js'
-import { checkHeartBeat } from './utils/cron/attendance.cron.js'
+import { checkHeartBeat, closePreviousDayAttendance } from './utils/cron/attendance.cron.js'
 
 const app = new Hono()
 
@@ -17,6 +17,7 @@ app.post('/', async (c) => {
 })
 
 checkHeartBeat()
+closePreviousDayAttendance()
 
 app.route('/api/user', userRoute)
 app.route('/api/activity', activityRoute)

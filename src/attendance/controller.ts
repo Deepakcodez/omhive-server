@@ -4,7 +4,6 @@ import { attendanceTable, usersTable } from "../db/schema.js"
 
 export const attendanceController = {
     getAttendanceByDate: async ({ date }: { date: string }) => {
-
         const rows = await db
             .select({
                 attendanceId: attendanceTable.id,
@@ -16,9 +15,14 @@ export const attendanceController = {
                 loginTime: attendanceTable.loginTime,
                 logoutTime: attendanceTable.logoutTime,
 
-                totalWorkSeconds: attendanceTable.totalWorkSeconds,
-                totalBreakSeconds: attendanceTable.totalBreakSeconds,
-                totalIdleSeconds: attendanceTable.totalIdleSeconds,
+                totalWorkSeconds:
+                    attendanceTable.totalWorkSeconds,
+
+                totalBreakSeconds:
+                    attendanceTable.totalBreakSeconds,
+
+                totalIdleSeconds:
+                    attendanceTable.totalIdleSeconds,
 
                 status: attendanceTable.status,
             })
@@ -30,6 +34,7 @@ export const attendanceController = {
                     eq(attendanceTable.date, date)
                 )
             )
+
         const usersMap = new Map()
 
         for (const row of rows) {
@@ -49,23 +54,53 @@ export const attendanceController = {
 
             const user = usersMap.get(row.userId)
 
-            // User hasn't logged in
             if (!row.attendanceId) {
                 continue
             }
 
-            user.totalWorkSeconds += row.totalWorkSeconds ?? 0
-            user.totalBreakSeconds += row.totalBreakSeconds ?? 0
-            user.totalIdleSeconds += row.totalIdleSeconds ?? 0
+            let workSeconds =
+                row.totalWorkSeconds ?? 0
+
+            let breakSeconds =
+                row.totalBreakSeconds ?? 0
+
+            const idleSeconds =
+                row.totalIdleSeconds ?? 0
+
+            // Active attendance
+            if (
+                row.loginTime &&
+                !row.logoutTime &&
+                row.status !== "logged_out"
+            ) {
+                const totalSeconds = Math.floor(
+                    (
+                        Date.now() -
+                        new Date(row.loginTime).getTime()
+                    ) / 1000
+                )
+
+                workSeconds = Math.max(
+                    0,
+                    totalSeconds -
+                    breakSeconds -
+                    idleSeconds
+                )
+            }
+
+            user.totalWorkSeconds += workSeconds
+            user.totalBreakSeconds += breakSeconds
+            user.totalIdleSeconds += idleSeconds
 
             user.sessions.push({
                 attendanceId: row.attendanceId,
                 loginTime: row.loginTime,
                 logoutTime: row.logoutTime,
                 status: row.status,
-                workSeconds: row.totalWorkSeconds,
-                breakSeconds: row.totalBreakSeconds,
-                idleSeconds: row.totalIdleSeconds,
+
+                workSeconds,
+                breakSeconds,
+                idleSeconds,
             })
         }
 

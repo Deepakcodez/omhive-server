@@ -1,6 +1,6 @@
 import { and, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { attendanceTable, breakSessionTable, usersTable } from "../db/schema.js";
+import { attendanceTable, breakSessionTable, usersTable, idleSessionTable } from "../db/schema.js";
 import type { Login, User } from "./schema.js";
 
 export const userController = {
@@ -30,6 +30,7 @@ export const userController = {
             );
 
             let totalBreakSeconds = attendance.totalBreakSeconds;
+            let totalIdleSeconds = attendance.totalIdleSeconds ?? 0;
 
             // Check if user forgot to resume break
             const [activeBreak] = await db
@@ -68,6 +69,43 @@ export const userController = {
                     );
             }
 
+            // Check for active idle session
+            const [activeIdle] = await db
+                .select()
+                .from(idleSessionTable)
+                .where(
+                    and(
+                        eq(
+                            idleSessionTable.attendanceId,
+                            attendance.id
+                        ),
+                        isNull(idleSessionTable.endTime)
+                    )
+                );
+
+            if (activeIdle) {
+                const idleDuration = Math.floor(
+                    (logoutTime.getTime() -
+                        activeIdle.startTime.getTime()) /
+                    1000
+                );
+
+                totalIdleSeconds += idleDuration;
+
+                await db
+                    .update(idleSessionTable)
+                    .set({
+                        endTime: logoutTime,
+                        durationSeconds: idleDuration,
+                    })
+                    .where(
+                        eq(
+                            idleSessionTable.id,
+                            activeIdle.id
+                        )
+                    );
+            }
+
             const totalSeconds = Math.floor(
                 (logoutTime.getTime() -
                     attendance.loginTime.getTime()) /
@@ -76,7 +114,7 @@ export const userController = {
 
             const workSeconds = Math.max(
                 0,
-                totalSeconds - totalBreakSeconds
+                totalSeconds - totalBreakSeconds - totalIdleSeconds
             );
 
             await db
@@ -85,6 +123,7 @@ export const userController = {
                     logoutTime,
                     totalWorkSeconds: workSeconds,
                     totalBreakSeconds,
+                    totalIdleSeconds,
                     status: 'logged_out',
                 })
                 .where(
@@ -445,6 +484,7 @@ export const userController = {
         const logoutTime = new Date();
 
         let totalBreakSeconds = attendance.totalBreakSeconds;
+        let totalIdleSeconds = attendance.totalIdleSeconds ?? 0;
 
         const [activeBreak] = await db
             .select()
@@ -473,6 +513,34 @@ export const userController = {
                 .where(eq(breakSessionTable.id, activeBreak.id));
         }
 
+        // Check for active idle session
+        const [activeIdle] = await db
+            .select()
+            .from(idleSessionTable)
+            .where(
+                and(
+                    eq(idleSessionTable.attendanceId, attendanceId),
+                    isNull(idleSessionTable.endTime)
+                )
+            );
+
+        if (activeIdle) {
+            const idleDuration = Math.floor(
+                (logoutTime.getTime() -
+                    activeIdle.startTime.getTime()) / 1000
+            );
+
+            totalIdleSeconds += idleDuration;
+
+            await db
+                .update(idleSessionTable)
+                .set({
+                    endTime: logoutTime,
+                    durationSeconds: idleDuration,
+                })
+                .where(eq(idleSessionTable.id, activeIdle.id));
+        }
+
         const totalSeconds = Math.floor(
             (logoutTime.getTime() -
                 attendance.loginTime.getTime()) / 1000
@@ -480,7 +548,7 @@ export const userController = {
 
         const workSeconds = Math.max(
             0,
-            totalSeconds - totalBreakSeconds
+            totalSeconds - totalBreakSeconds - totalIdleSeconds
         );
 
         await db
@@ -489,6 +557,7 @@ export const userController = {
                 logoutTime,
                 totalWorkSeconds: workSeconds,
                 totalBreakSeconds,
+                totalIdleSeconds,
                 status: "logged_out",
             })
             .where(eq(attendanceTable.id, attendanceId));
@@ -498,6 +567,7 @@ export const userController = {
             logoutTime,
             totalWorkSeconds: workSeconds,
             totalBreakSeconds,
+            totalIdleSeconds,
         };
     },
 

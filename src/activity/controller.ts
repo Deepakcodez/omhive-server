@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, lte, count, sql, isNull } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { activitySession, attendanceTable, idleSessionTable } from "../db/schema.js";
+import { activitySession, attendanceTable, idleSessionTable, breakSessionTable } from "../db/schema.js";
 import type { Activity, ActivityDateFilters, ActivityFilters } from "./types.js";
 
 const toDate = (value: Date | string) =>
@@ -115,6 +115,7 @@ export const activityController = {
     limit = 100,
     offset = 1,
   }: ActivityFilters) => {
+    // 1. Conditions for activity sessions
     const conditions = [];
 
     if (attendanceId) {
@@ -146,30 +147,100 @@ export const activityController = {
     const whereClause =
       conditions.length > 0 ? and(...conditions) : undefined;
 
+    const activities = await db
+      .select()
+      .from(activitySession)
+      .where(whereClause);
 
+    // 2. Conditions for break sessions
+    const breakConds = [];
+    if (attendanceId) {
+      breakConds.push(eq(breakSessionTable.attendanceId, attendanceId));
+    } else {
+      if (userId) {
+        breakConds.push(eq(attendanceTable.userId, userId));
+      }
+      if (from) {
+        breakConds.push(gte(breakSessionTable.startTime, new Date(from)));
+      }
+      if (to) {
+        breakConds.push(lte(breakSessionTable.startTime, new Date(to)));
+      }
+    }
+    const breakWhere = breakConds.length > 0 ? and(...breakConds) : undefined;
+    const rawBreaks = await db
+      .select({
+        id: breakSessionTable.id,
+        attendanceId: breakSessionTable.attendanceId,
+        startTime: breakSessionTable.startTime,
+        endTime: breakSessionTable.endTime,
+        durationSeconds: breakSessionTable.durationSeconds,
+      })
+      .from(breakSessionTable)
+      .innerJoin(attendanceTable, eq(breakSessionTable.attendanceId, attendanceTable.id))
+      .where(breakWhere);
 
+    const breakActivities = rawBreaks.map(b => ({
+      id: b.id,
+      syncId: b.id,
+      attendanceId: b.attendanceId,
+      userId: userId || '',
+      activityType: 'break' as const,
+      startTime: b.startTime,
+      endTime: b.endTime || new Date(),
+      duration: b.durationSeconds || Math.max(0, Math.round(((b.endTime ? b.endTime.getTime() : Date.now()) - b.startTime.getTime()) / 1000)),
+      software: 'Break',
+      title: 'On Break',
+      hostname: '',
+      systemUsername: '',
+    }));
 
-    const [data, totalResult] = await Promise.all([
-      db
-        .select()
-        .from(activitySession)
-        .where(whereClause)
-        .orderBy(desc(activitySession.startTime))
-        .limit(limit)
-        .offset(offset),
+    // 3. Conditions for idle sessions
+    const idleConds = [];
+    if (attendanceId) {
+      idleConds.push(eq(idleSessionTable.attendanceId, attendanceId));
+    } else {
+      if (userId) {
+        idleConds.push(eq(idleSessionTable.userId, userId));
+      }
+      if (from) {
+        idleConds.push(gte(idleSessionTable.startTime, new Date(from)));
+      }
+      if (to) {
+        idleConds.push(lte(idleSessionTable.startTime, new Date(to)));
+      }
+    }
+    const idleWhere = idleConds.length > 0 ? and(...idleConds) : undefined;
+    const rawIdles = await db
+      .select()
+      .from(idleSessionTable)
+      .where(idleWhere);
 
-      db
-        .select({
-          count: count(),
-        })
-        .from(activitySession)
-        .where(whereClause),
-    ]);
+    const idleActivities = rawIdles.map(i => ({
+      id: i.id,
+      syncId: i.id,
+      attendanceId: i.attendanceId,
+      userId: i.userId,
+      activityType: 'break' as const,
+      startTime: i.startTime,
+      endTime: i.endTime || new Date(),
+      duration: i.durationSeconds || Math.max(0, Math.round(((i.endTime ? i.endTime.getTime() : Date.now()) - i.startTime.getTime()) / 1000)),
+      software: 'Idle',
+      title: 'User Idle',
+      hostname: '',
+      systemUsername: '',
+    }));
 
-    console.log("activity data : ", data)
+    // 4. Combine, sort by startTime descending, and paginate
+    const combined = [...activities, ...breakActivities, ...idleActivities]
+      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+
+    const paginatedData = combined.slice(offset, offset + limit);
+
+    console.log("combined activities length:", combined.length, "paginated length:", paginatedData.length);
     return {
-      data,
-      total: totalResult[0]?.count ?? 0,
+      data: paginatedData,
+      total: combined.length,
       limit,
       offset,
     };

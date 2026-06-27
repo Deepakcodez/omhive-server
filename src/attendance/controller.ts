@@ -147,7 +147,6 @@ export const attendanceController = {
                     new Date(a.loginTime).getTime()
             )
         }
-        console.log(Array.from(usersMap.values()),  "attendance")
         return Array.from(usersMap.values())
     },
     setLastSeen: async ({ attendanceId, time }: { attendanceId: string, time: string }) => {

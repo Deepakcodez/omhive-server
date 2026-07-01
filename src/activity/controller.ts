@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, lte, count, sql, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte, count, sql, isNull, SQL } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { activitySession, attendanceTable, idleSessionTable, breakSessionTable } from "../db/schema.js";
 import type { Activity, ActivityDateFilters, ActivityFilters } from "./types.js";
@@ -245,6 +245,188 @@ export const activityController = {
       offset,
     };
   },
+  getActivitySessionsForGraph: async ({
+    userId,
+    attendanceId,
+    from,
+    to,
+  }: ActivityFilters) => {
+    // Activity conditions
+    const conditions: SQL[] = [];
+    const breakConds: SQL[] = [];
+    const idleConds: SQL[] = [];
+
+    if (attendanceId) {
+      conditions.push(
+        eq(activitySession.attendanceId, attendanceId)
+      );
+    } else {
+      if (userId) {
+        conditions.push(
+          eq(activitySession.userId, userId)
+        );
+      }
+
+      if (from) {
+        conditions.push(
+          gte(activitySession.startTime, new Date(from))
+        );
+      }
+
+      if (to) {
+        conditions.push(
+          lte(activitySession.startTime, new Date(to))
+        );
+      }
+    }
+
+    const whereClause =
+      conditions.length > 0 ? and(...conditions) : undefined;
+
+    const activities = await db
+      .select()
+      .from(activitySession)
+      .where(whereClause);
+
+
+    if (attendanceId) {
+      breakConds.push(
+        eq(breakSessionTable.attendanceId, attendanceId)
+      );
+    } else {
+      if (userId) {
+        breakConds.push(
+          eq(attendanceTable.userId, userId)
+        );
+      }
+
+      if (from) {
+        breakConds.push(
+          gte(breakSessionTable.startTime, new Date(from))
+        );
+      }
+
+      if (to) {
+        breakConds.push(
+          lte(breakSessionTable.startTime, new Date(to))
+        );
+      }
+    }
+
+    const rawBreaks = await db
+      .select({
+        id: breakSessionTable.id,
+        attendanceId: breakSessionTable.attendanceId,
+        userId: attendanceTable.userId,
+        startTime: breakSessionTable.startTime,
+        endTime: breakSessionTable.endTime,
+        durationSeconds: breakSessionTable.durationSeconds,
+      })
+      .from(breakSessionTable)
+      .innerJoin(
+        attendanceTable,
+        eq(breakSessionTable.attendanceId, attendanceTable.id)
+      )
+      .where(
+        breakConds.length
+          ? and(...breakConds)
+          : undefined
+      );
+
+    const breakActivities = rawBreaks.map((b) => ({
+      id: b.id,
+      syncId: b.id,
+      attendanceId: b.attendanceId,
+      userId: b.userId,
+      activityType: 'break' as const,
+      startTime: b.startTime,
+      endTime: b.endTime ?? new Date(),
+      duration:
+        b.durationSeconds ||
+        Math.round(
+          ((b.endTime?.getTime() ?? Date.now()) -
+            b.startTime.getTime()) /
+          1000
+        ),
+      software: 'Break',
+      title: 'On Break',
+      hostname: '',
+      systemUsername: '',
+    }));
+
+
+
+    if (attendanceId) {
+      idleConds.push(
+        eq(idleSessionTable.attendanceId, attendanceId)
+      );
+    } else {
+      if (userId) {
+        idleConds.push(
+          eq(idleSessionTable.userId, userId)
+        );
+      }
+
+      if (from) {
+        idleConds.push(
+          gte(idleSessionTable.startTime, new Date(from))
+        );
+      }
+
+      if (to) {
+        idleConds.push(
+          lte(idleSessionTable.startTime, new Date(to))
+        );
+      }
+    }
+
+    const rawIdles = await db
+      .select()
+      .from(idleSessionTable)
+      .where(
+        idleConds.length
+          ? and(...idleConds)
+          : undefined
+      );
+
+    const idleActivities = rawIdles.map((i) => ({
+      id: i.id,
+      syncId: i.id,
+      attendanceId: i.attendanceId,
+      userId: i.userId,
+      activityType: 'idle' as const,
+      startTime: i.startTime,
+      endTime: i.endTime,
+      duration:
+        i.durationSeconds ||
+        Math.round(
+          ((i.endTime?.getTime() ?? Date.now()) -
+            i.startTime.getTime()) /
+          1000
+        ),
+      software: 'Idle',
+      title: 'User Idle',
+      hostname: '',
+      systemUsername: '',
+    }));
+
+    const data = [
+      ...activities,
+      ...breakActivities,
+      ...idleActivities,
+    ].sort(
+      (a, b) =>
+        new Date(a.startTime).getTime() -
+        new Date(b.startTime).getTime()
+    )
+
+    return {
+      data,
+      total: data.length,
+      limit: data.length,
+      offset: 0,
+    };
+  },
 
   getActivityByDate: async ({
     date,
@@ -262,6 +444,20 @@ export const activityController = {
       to: end.toISOString(),
       limit,
       offset: (page - 1) * limit,
+    });
+  },
+  getActivityGraphByDate: async ({
+    date,
+    userId,
+    attendanceId,
+  }: Omit<ActivityDateFilters, 'page' | 'limit'>) => {
+    const { start, end } = getDayRange(date);
+
+    return activityController.getActivitySessionsForGraph({
+      userId,
+      attendanceId,
+      from: start.toISOString(),
+      to: end.toISOString(),
     });
   },
   startIdleSession: async ({

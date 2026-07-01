@@ -149,6 +149,32 @@ export const activityRoute = new Hono()
       );
     }
   })
+  .get("/graph/date/:date", async (c) => {
+    try {
+      const date = c.req.param("date");
+
+      if (!isValidDateParam(date)) {
+        return c.json(
+          { data: null, success: false, message: "Date must be in YYYY-MM-DD format" },
+          400,
+        );
+      }
+      const sessions = await activityController.getActivityGraphByDate({
+        date,
+        userId: c.req.query("userId"),
+        attendanceId: c.req.query("attendanceId"),
+
+      });
+
+      return c.json({ data: sessions, success: true, message: "Fetched session successfully" }, 200);
+    } catch (e: any) {
+      const status = e.message === "Limit must be between 1 and 500" ? 400 : 500;
+      return c.json(
+        { data: null, success: false, message: e.message ?? "Failed to get activity sessions by date" },
+        status,
+      );
+    }
+  })
 
   // get one activity session
   .get("/:id", async (c) => {

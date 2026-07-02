@@ -150,7 +150,6 @@ export const attendanceController = {
         return Array.from(usersMap.values())
     },
     setLastSeen: async ({ attendanceId, time }: { attendanceId: string, time: string }) => {
-        console.log("estting last sean")
         const [attendance] = await db
             .update(attendanceTable)
             .set({
@@ -160,7 +159,6 @@ export const attendanceController = {
                 eq(attendanceTable.id, attendanceId)
             )
             .returning()
-        console.log("estting last sean end")
         return attendance
     }
 }

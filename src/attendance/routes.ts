@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { attendanceController } from "./controller.js";
+import { userController } from "../user/controller.js";
 
 export const attendanceRoute = new Hono()
 
@@ -36,11 +37,10 @@ export const attendanceRoute = new Hono()
         try {
             const body = await c.req.json();
             console.log("heartbeat", body)
-            const { attendanceId, time } = body;
+            const { attendanceId, time, userId } = body;
 
 
 
-            //user will hit this api in every 1 min  wait for 5 min if  no req happens for 5 min set the user attendance to logout 
             const attendance = await attendanceController.setLastSeen({ attendanceId, time })
             if (!attendance) {
                 return c.json(
@@ -49,7 +49,13 @@ export const attendanceRoute = new Hono()
                 );
             }
 
-            return c.json({ data: attendance, success: true, message: "Heartbeat is fine" }, 200);
+            const isLoggedInResponse = await userController.isLoggedIn({ userId: userId, date: time })
+            const response = {
+                "loggedIn": isLoggedInResponse.loggedIn,
+                "status": attendance.status,
+                "attendanceId": attendance.id
+            }
+            return c.json({ data: response, success: true, message: "Heartbeat is fine" }, 200);
         } catch (e: any) {
             return c.json(
                 { data: null, success: false, message: e.message ?? "Failed to check heartbeat" },

@@ -234,24 +234,83 @@ export const userController = {
             )
             .orderBy(attendanceTable.date);
 
-        const totalDays = attendance.length;
+        // Group and aggregate records by date to handle multiple logins/logouts in a day
+        const aggregatedMap = new Map<string, typeof attendance[0]>();
 
-        const presentDays = attendance.filter(a => a.isPresent).length;
+        for (const record of attendance) {
+            const dateStr = record.date;
+            if (!aggregatedMap.has(dateStr)) {
+                aggregatedMap.set(dateStr, { ...record });
+            } else {
+                const existing = aggregatedMap.get(dateStr)!;
 
-        const totalWorkSeconds = attendance.reduce(
+                // Sum durations
+                existing.totalWorkSeconds += record.totalWorkSeconds;
+                existing.totalBreakSeconds += record.totalBreakSeconds;
+                existing.totalIdleSeconds = (existing.totalIdleSeconds ?? 0) + (record.totalIdleSeconds ?? 0);
+
+                // Use the earliest login time
+                if (record.loginTime < existing.loginTime) {
+                    existing.loginTime = record.loginTime;
+                }
+
+                // If any session has no logout time, it means the user is still active (logoutTime is null).
+                // Otherwise, use the latest logout time.
+                if (existing.logoutTime === null || record.logoutTime === null) {
+                    existing.logoutTime = null;
+                } else if (record.logoutTime > existing.logoutTime) {
+                    existing.logoutTime = record.logoutTime;
+                }
+
+                // Expected work seconds (use maximum)
+                existing.expectedWorkSeconds = Math.max(existing.expectedWorkSeconds, record.expectedWorkSeconds);
+
+                // Presence check (logical OR)
+                if (record.isPresent) {
+                    existing.isPresent = true;
+                }
+
+                // Status priority: 'working' or 'break' are active statuses, take precedence over 'logged_out'
+                if (record.status === 'working' || record.status === 'break') {
+                    existing.status = record.status;
+                }
+
+                // Combine unique device info
+                const mergeUnique = (a: string, b: string) => {
+                    const set = new Set(a.split(', ').concat(b.split(', ')));
+                    return Array.from(set).join(', ');
+                };
+                existing.hostname = mergeUnique(existing.hostname, record.hostname);
+                existing.systemUsername = mergeUnique(existing.systemUsername, record.systemUsername);
+                existing.os = mergeUnique(existing.os, record.os);
+
+                // For lastSeen, use the latest
+                if (record.lastSeen) {
+                    if (!existing.lastSeen || record.lastSeen > existing.lastSeen) {
+                        existing.lastSeen = record.lastSeen;
+                    }
+                }
+            }
+        }
+
+        const aggregatedAttendance = Array.from(aggregatedMap.values());
+
+        const totalDays = aggregatedAttendance.length;
+
+        const presentDays = aggregatedAttendance.filter(a => a.isPresent).length;
+
+        const totalWorkSeconds = aggregatedAttendance.reduce(
             (sum, a) => sum + a.totalWorkSeconds,
             0
         );
 
-        const totalBreakSeconds = attendance.reduce(
+        const totalBreakSeconds = aggregatedAttendance.reduce(
             (sum, a) => sum + a.totalBreakSeconds,
             0
         );
 
-
-
         return {
-            attendance,
+            attendance: aggregatedAttendance,
             summary: {
                 totalDays,
                 presentDays,

@@ -4,6 +4,7 @@ import { userRoute } from './user/routes.js'
 import { activityRoute } from './activity/route.js'
 import { attendanceRoute } from './attendance/routes.js'
 import { checkHeartBeat, closePreviousDayAttendance } from './utils/cron/attendance.cron.js'
+import { adminRoute } from './admin/route.js'
 
 const app = new Hono()
 
@@ -19,6 +20,7 @@ app.post('/', async (c) => {
 checkHeartBeat()
 closePreviousDayAttendance()
 
+app.route('/api/admin', adminRoute)
 app.route('/api/user', userRoute)
 app.route('/api/activity', activityRoute)
 app.route('/api/attendance', attendanceRoute)

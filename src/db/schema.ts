@@ -1,4 +1,5 @@
-import { boolean, date, index, integer, pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+
+import { boolean, date, index, integer, pgEnum, pgTable, text, timestamp,  uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 
 
 export const workStatus = pgEnum('work_status', ['working', 'break', 'logged_out']);

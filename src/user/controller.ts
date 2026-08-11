@@ -4,14 +4,7 @@ import { attendanceTable, breakSessionTable, usersTable, idleSessionTable } from
 import type { Login, User } from "./schema.js";
 
 export const userController = {
-    createUser: async ({ userName, fullName, phone }: User) => {
-        const user = await db.insert(usersTable).values({
-            userName,
-            fullName,
-            phone,
-        }).returning()
-        return user
-    },
+ 
     autoClosePreviousDayAttendances: async () => {
         const today = new Date().toISOString().split('T')[0];
 

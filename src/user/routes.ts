@@ -5,6 +5,8 @@ import { isLoggedInSchema, LoginSchema, MonthAttendanceSchema, UserSchema } from
 import { isValidDateParam } from "../activity/route.js";
 
 export const userRoute = new Hono()
+
+    
     // get all user
     .get('/list', async (c) => {
         try {
@@ -51,20 +53,7 @@ export const userRoute = new Hono()
             }
         })
 
-    // create user
-    .post('/',
-        validator('json', (value, c) => {
-            const parsed = UserSchema.safeParse(value)
-            if (!parsed.success) {
-                return c.json({ error: parsed.error.issues }, 401)
-            }
-            return parsed.data
-        }),
-        async (c) => {
-            const { userName, fullName, phone } = c.req.valid('json')
-            const user = await userController.createUser({ userName, fullName, phone })
-            return c.json({ data: user, success: true }, 200)
-        })
+
 
     // is logged in
     .post('/is-logged-in',
@@ -94,7 +83,7 @@ export const userRoute = new Hono()
         async (c) => {
             try {
                 const { userName, startTime, hostname, systemUsername, os, timezone } = c.req.valid('json')
-    
+
                 const user = await userController.login({ userName, startTime, hostname, systemUsername, os, timezone })
                 if (user.userName == process.env.ADMIN) {
                     return c.json({ data: user, success: true, message: "User logged in", isAdmin: true }, 200)

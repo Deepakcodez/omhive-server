@@ -12,15 +12,15 @@
   "dependencies": {
     "@hono/node-server": "^2.0.5",
     "dotenv": "^17.4.2",
-    "drizzle-orm": "^0.45.2",
-    "hono": "^4.12.25",
+    "drizzle-orm": "1.0.0-rc.4",
+    "hono": "^4.13.1",
     "pg": "^8.21.0",
-    "zod": "^4.4.3"
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.17",
     "@types/pg": "^8.20.0",
-    "drizzle-kit": "^0.31.10",
+    "drizzle-kit": "1.0.0-rc.4",
     "tsx": "^4.22.4",
     "typescript": "^5.8.3"
   }

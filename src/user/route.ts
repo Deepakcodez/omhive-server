@@ -6,17 +6,7 @@ import { isValidDateParam } from "../activity/route.js";
 
 export const userRoute = new Hono()
 
-    
-    // get all user
-    .get('/list', async (c) => {
-        try {
-            const users = await userController.allUser()
-            return c.json({ data: users, success: true, message: "Fetched all user successfully" }, 200)
-        } catch (error: any) {
-            console.log("error in get all user", error)
-            return c.json({ data: null, success: false, message: error.message }, 500)
-        }
-    })
+
     .get('/with-login-logout/:date', async (c) => {
         try {
             const date = c.req.param('date');
@@ -67,8 +57,13 @@ export const userRoute = new Hono()
         async (c) => {
             const { userId, date } = c.req.valid('json')
             console.log("userid and date======>>>>", userId, date)
-            const user = await userController.isLoggedIn({ userId, date })
-            return c.json({ data: user, success: true }, 200)
+            try {
+                const user = await userController.isLoggedIn({ userId, date })
+                return c.json({ data: user, success: true }, 200)
+            } catch (error: any) {
+                console.log("error in is logged in", error)
+                return c.json({ data: null, success: false, message: error.message }, 500)
+            }
         })
 
     // user login
@@ -129,12 +124,22 @@ export const userRoute = new Hono()
         if (!attendanceId) {
             return c.json({ data: null, success: false, message: "Attendance ID is required" }, 400)
         }
-        const user = await userController.logout({ attendanceId })
-        return c.json({ data: user, success: true }, 200)
+        try {
+            const user = await userController.logout({ attendanceId })
+            return c.json({ data: user, success: true }, 200)
+        } catch (error: any) {
+            console.log("error in logout", error)
+            return c.json({ data: null, success: false, message: error.message }, 500)
+        }
     })
 
     // get user by id
     .get('/:id', async (c) => {
-        const user = await userController.userById({ id: c.req.param('id') })
-        return c.json({ data: user, success: true }, 200)
+        try {
+            const user = await userController.userById({ id: c.req.param('id') })
+            return c.json({ data: user, success: true }, 200)
+        } catch (error: any) {
+            console.log("error in get user by id", error)
+            return c.json({ data: null, success: false, message: error.message }, 500)
+        }
     })

@@ -1,6 +1,6 @@
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
-import { userRoute } from './user/routes.js'
+import { userRoute } from './user/route.js'
 import { activityRoute } from './activity/route.js'
 import { attendanceRoute } from './attendance/routes.js'
 import { checkHeartBeat, closePreviousDayAttendance } from './utils/cron/attendance.cron.js'

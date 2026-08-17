@@ -37,7 +37,19 @@ export const adminRoute = new Hono()
             if (!userId) {
                 return c.json({ data: null, success: false, message: "userId is required" }, 401)
             }
-            const user = await adminController.activateUser({ userId })
+            const user = await adminController.activateUser({ id: userId })
+            return c.json({ data: user, success: true }, 200)
+        } catch (error: any) {
+            return c.json({ data: null, success: false, message: error.message }, 401)
+        }
+    })
+    .post('/deactivate-user', async (c) => {
+        try {
+            const { userId } = await c.req.json()
+            if (!userId) {
+                return c.json({ data: null, success: false, message: "userId is required" }, 401)
+            }
+            const user = await adminController.deActivateUser({ id: userId })
             return c.json({ data: user, success: true }, 200)
         } catch (error: any) {
             return c.json({ data: null, success: false, message: error.message }, 401)

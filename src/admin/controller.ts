@@ -1,4 +1,4 @@
-import { eq , } from "drizzle-orm"
+import { eq, } from "drizzle-orm"
 import { db } from "../db/index.js"
 import { usersTable } from "../db/schema.js"
 import type { User } from "../user/schema.js"
@@ -30,9 +30,13 @@ export const adminController = {
     },
     activateUser: async ({ id }: { id: string }) => {
         try {
-            const [user] = await db.update(usersTable).set({
-                isActive: true,
-            }).where(eq(usersTable.id, id)).returning()
+            const [user] = await db
+                .update(usersTable)
+                .set({
+                    isActive: true,
+                })
+                .where(eq(usersTable.id, id))
+                .returning()
             if (!user) {
                 throw new Error("Failed to activate user")
             }
@@ -43,9 +47,13 @@ export const adminController = {
     },
     deActivateUser: async ({ id }: { id: string }) => {
         try {
-            const [user] = await db.update(usersTable).set({
-                isActive: false,
-            }).where(eq(usersTable.id, id)).returning()
+            const [user] = await db
+                .update(usersTable)
+                .set({
+                    isActive: false,
+                })
+                .where(eq(usersTable.id, id))
+                .returning()
             if (!user) {
                 throw new Error("Failed to deactivate user")
             }

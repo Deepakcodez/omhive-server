@@ -14,8 +14,7 @@ export const checkHeartBeat = () => {
             .where(
                 and(
                     eq(
-                        attendanceTable.status,
-                        "working"
+                        attendanceTable.status, "working"
                     ),
                     isNotNull(
                         attendanceTable.lastSeen
@@ -38,9 +37,15 @@ export const checkHeartBeat = () => {
                         attendance.lastSeen
                 })
                 .where(
-                    eq(
-                        attendanceTable.id,
-                        attendance.id
+                    and(
+                        eq(
+                            attendanceTable.id,
+                            attendance.id
+                        ),
+                        eq(
+                            attendanceTable.status,
+                            "working"
+                        )
                     )
                 )
         }
@@ -50,17 +55,45 @@ export const checkHeartBeat = () => {
 
 
 
-    export const closePreviousDayAttendance = () => {
-        setInterval(async () => {
-            const today =
-                new Date().toISOString().split("T")[0]
+export const closePreviousDayAttendance = () => {
+    setInterval(async () => {
+        const today =
+            new Date().toISOString().split("T")[0]
 
-            const oldSessions = await db
-                .select()
-                .from(attendanceTable)
+        const oldSessions = await db
+            .select()
+            .from(attendanceTable)
+            .where(
+                and(
+                    ne(attendanceTable.date, today),
+                    or(
+                        eq(
+                            attendanceTable.status,
+                            "working"
+                        ),
+                        eq(
+                            attendanceTable.status,
+                            "break"
+                        )
+                    )
+                )
+            )
+
+        for (const attendance of oldSessions) {
+            await db
+                .update(attendanceTable)
+                .set({
+                    status: "logged_out",
+                    logoutTime:
+                        attendance.lastSeen ??
+                        attendance.loginTime
+                })
                 .where(
                     and(
-                        ne(attendanceTable.date, today),
+                        eq(
+                            attendanceTable.id,
+                            attendance.id
+                        ),
                         or(
                             eq(
                                 attendanceTable.status,
@@ -73,22 +106,7 @@ export const checkHeartBeat = () => {
                         )
                     )
                 )
+        }
+    }, 60 * 60 * 1000)
+}
 
-            for (const attendance of oldSessions) {
-                await db
-                    .update(attendanceTable)
-                    .set({
-                        status: "logged_out",
-                        logoutTime:
-                            attendance.lastSeen ??
-                            attendance.loginTime
-                    })
-                    .where(
-                        eq(
-                            attendanceTable.id,
-                            attendance.id
-                        )
-                    )
-            }
-        }, 60 * 60 * 1000)
-    }

@@ -4,7 +4,7 @@ import { attendanceTable, breakSessionTable, usersTable, idleSessionTable } from
 import type { Login, User } from "./schema.js";
 
 export const userController = {
- 
+
     autoClosePreviousDayAttendances: async () => {
         const today = new Date().toISOString().split('T')[0];
 
@@ -312,8 +312,8 @@ export const userController = {
             },
         };
     },
-    isLoggedIn: async ({ userId, date: today }: { userId: string, date: string }) => {
-        console.log(userId, today)
+    isLoggedIn: async ({ userId, date }: { userId: string, date: Date }) => {
+        const dateStr = date.toISOString().split("T")[0];
         try {
             const [attendance] = await db
                 .select()
@@ -321,7 +321,7 @@ export const userController = {
                 .where(
                     and(
                         eq(attendanceTable.userId, userId),
-                        eq(attendanceTable.date, today),
+                        eq(attendanceTable.date, dateStr),
                         isNull(attendanceTable.logoutTime)
                     )
                 );

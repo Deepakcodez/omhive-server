@@ -55,8 +55,8 @@ export const userRoute = new Hono()
             return parsed.data
         }),
         async (c) => {
-            const { userId, date } = c.req.valid('json')
-            console.log("userid and date======>>>>", userId, date)
+            const { userId, } = c.req.valid('json')
+            const date = new Date()
             try {
                 const user = await userController.isLoggedIn({ userId, date })
                 return c.json({ data: user, success: true }, 200)

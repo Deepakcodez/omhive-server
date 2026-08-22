@@ -41,27 +41,27 @@ export const attendanceController = {
         const activeBreaks =
             attendanceIds.length > 0
                 ? await db
-                      .select()
-                      .from(breakSessionTable)
-                      .where(
-                          and(
-                              inArray(breakSessionTable.attendanceId, attendanceIds),
-                              isNull(breakSessionTable.endTime)
-                          )
-                      )
+                    .select()
+                    .from(breakSessionTable)
+                    .where(
+                        and(
+                            inArray(breakSessionTable.attendanceId, attendanceIds),
+                            isNull(breakSessionTable.endTime)
+                        )
+                    )
                 : []
 
         const activeIdles =
             attendanceIds.length > 0
                 ? await db
-                      .select()
-                      .from(idleSessionTable)
-                      .where(
-                          and(
-                              inArray(idleSessionTable.attendanceId, attendanceIds),
-                              isNull(idleSessionTable.endTime)
-                          )
-                      )
+                    .select()
+                    .from(idleSessionTable)
+                    .where(
+                        and(
+                            inArray(idleSessionTable.attendanceId, attendanceIds),
+                            isNull(idleSessionTable.endTime)
+                        )
+                    )
                 : []
 
         const usersMap = new Map()
@@ -149,11 +149,11 @@ export const attendanceController = {
         }
         return Array.from(usersMap.values())
     },
-    setLastSeen: async ({ attendanceId, time }: { attendanceId: string, time: string }) => {
+    setLastSeen: async ({ attendanceId, time }: { attendanceId: string, time: Date }) => {
         const [attendance] = await db
             .update(attendanceTable)
             .set({
-                lastSeen: new Date(time)
+                lastSeen: time
             })
             .where(
                 eq(attendanceTable.id, attendanceId)
